@@ -1,0 +1,103 @@
+build:
+  maxIssues: 0  # 안티패턴 발견 시 빌드 실패
+
+# 스타일 규칙
+style:
+  active: true
+    
+  # 금지된 코멘트 패턴
+  ForbiddenComment:
+    active: true
+    comments:
+      - value: '!!'
+        reason: 'Use safe navigation operators instead'
+      - value: 'FIXME:'
+        reason: 'Resolve this before committing'
+      - value: 'STOPSHIP:'
+        reason: 'Should not be shipped'
+  
+  # Magic Number 금지
+  MagicNumber:
+    active: true
+    excludes: ['**/test/**', '**/androidTest/**']
+    ignoreNumbers: 
+      - '-1'
+      - '0' 
+      - '1'
+      - '2'
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: false
+    ignoreLocalVariableDeclaration: false
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+    ignoreRanges: false
+    ignoreExtensionFunctions: true
+
+# 잠재적 버그
+potential-bugs:
+  active: true
+  
+  # lateinit 과도한 사용 제한
+  LateinitUsage:
+    active: true
+    excludes: ['**/test/**', '**/androidTest/**']
+    ignoreAnnotated: ['Inject', 'Mock', 'InjectMocks', 'Bind', 'BeforeEach', 'Before']
+    
+  # Unsafe cast 금지
+  UnsafeCast:
+    active: true
+    
+  # !! 사용 금지
+  UselessPostfixExpression:
+    active: true
+    
+  # Platform type 처리
+  NullableToStringCall:
+    active: true
+    
+  # Cast to nullable type
+  CastToNullableType:
+    active: true
+
+# 복잡도 규칙
+complexity:
+  active: true
+  
+  # Scope function 중첩 제한
+  NestedScopeFunctions:
+    active: true
+    threshold: 2
+    functions: 
+      - 'also'
+      - 'apply'
+      - 'let'
+      - 'run'
+      - 'use'
+      - 'with'
+
+# 성능 규칙
+performance:
+  active: true
+  
+  # 불필요한 임시 객체 생성 금지
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+# detekt의 기본 제공 규칙셋 활성화
+coroutines:
+  active: true
+
+empty-blocks:
+  active: true
+
+exceptions:
+  active: true
+  
+naming:
+  active: true
+  
+comments:
+  active: false  # 프로젝트 초기이므로 주석 강제는 비활성화

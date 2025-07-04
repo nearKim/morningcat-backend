@@ -21,6 +21,7 @@ dependencies {
 
     testImplementation(libs.bundles.kotest)
     testImplementation(libs.kotest.property)
+    testImplementation(libs.mockk)
 }
 
 tasks.test {

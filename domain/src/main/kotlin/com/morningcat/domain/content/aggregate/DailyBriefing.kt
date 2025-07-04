@@ -1,6 +1,11 @@
 package com.morningcat.domain.content.aggregate
 
-import com.morningcat.domain.content.entity.*
+import com.morningcat.domain.content.entity.CalendarEvent
+import com.morningcat.domain.content.entity.EntertainmentRecommendation
+import com.morningcat.domain.content.entity.FinancialQuote
+import com.morningcat.domain.content.entity.NewsArticle
+import com.morningcat.domain.content.entity.SelfImprovementTip
+import com.morningcat.domain.content.entity.WeatherInfo
 import com.morningcat.domain.schedule.valueobject.DayType
 import com.morningcat.domain.user.valueobject.Location
 import com.morningcat.domain.user.valueobject.UserId

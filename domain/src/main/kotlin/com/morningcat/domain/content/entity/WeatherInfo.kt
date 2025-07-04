@@ -8,7 +8,7 @@ data class WeatherInfo(
     val condition: String,
     val humidity: Int,
     val uvIndex: Int,
-    val precipitation: Int
+    val precipitation: Int,
 ) {
     init {
         require(condition.isNotBlank()) { "Weather condition cannot be blank" }
@@ -16,11 +16,11 @@ data class WeatherInfo(
         require(uvIndex >= 0) { "UV index cannot be negative" }
         require(precipitation >= 0) { "Precipitation cannot be negative" }
     }
-    
+
     data class Temperature(
         val min: Double,
         val max: Double,
-        val current: Double
+        val current: Double,
     ) {
         init {
             require(min <= max) { "Minimum temperature cannot be greater than maximum" }

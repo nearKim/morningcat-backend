@@ -10,7 +10,7 @@ data class FinancialQuote(
     val previousClose: BigDecimal,
     val change: BigDecimal,
     val changePercent: BigDecimal,
-    val timestamp: LocalDateTime
+    val timestamp: LocalDateTime,
 ) {
     init {
         require(symbol.isNotBlank()) { "Symbol cannot be blank" }
@@ -18,10 +18,10 @@ data class FinancialQuote(
         require(currentPrice > BigDecimal.ZERO) { "Current price must be positive" }
         require(previousClose > BigDecimal.ZERO) { "Previous close must be positive" }
     }
-    
+
     val isGain: Boolean
         get() = change > BigDecimal.ZERO
-        
+
     val isLoss: Boolean
         get() = change < BigDecimal.ZERO
 }

@@ -3,7 +3,7 @@ package com.morningcat.domain.content.entity
 data class NewsArticle(
     val headline: String,
     val summary: String,
-    val url: String
+    val url: String,
 ) {
     init {
         require(headline.isNotBlank()) { "Headline cannot be blank" }

@@ -6,7 +6,7 @@ data class EntertainmentRecommendation(
     val description: String,
     val duration: Int?, // in minutes, null for articles/books
     val source: String,
-    val url: String?
+    val url: String?,
 ) {
     init {
         require(title.isNotBlank()) { "Title cannot be blank" }
@@ -14,13 +14,13 @@ data class EntertainmentRecommendation(
         require(source.isNotBlank()) { "Source cannot be blank" }
         duration?.let { require(it > 0) { "Duration must be positive" } }
     }
-    
+
     enum class EntertainmentType {
         MOVIE,
         TV_SHOW,
         BOOK,
         PODCAST,
         ARTICLE,
-        VIDEO
+        VIDEO,
     }
 }

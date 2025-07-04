@@ -2,7 +2,7 @@ package com.morningcat.domain.user.valueobject
 
 data class Location(
     val city: String,
-    val countryCode: String
+    val countryCode: String,
 ) {
     init {
         require(city.isNotBlank()) {
@@ -15,13 +15,15 @@ data class Location(
             "Country code must be a 2-letter ISO code"
         }
     }
-    
+
     companion object {
-        fun create(city: String, countryCode: String): Location {
-            return Location(
+        fun create(
+            city: String,
+            countryCode: String,
+        ): Location =
+            Location(
                 city = city.trim(),
-                countryCode = countryCode.trim().uppercase()
+                countryCode = countryCode.trim().uppercase(),
             )
-        }
     }
 }

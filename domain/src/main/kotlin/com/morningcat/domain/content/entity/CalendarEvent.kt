@@ -8,13 +8,13 @@ data class CalendarEvent(
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
     val location: String?,
-    val isAllDay: Boolean = false
+    val isAllDay: Boolean = false,
 ) {
     init {
         require(title.isNotBlank()) { "Event title cannot be blank" }
         require(endTime >= startTime) { "End time must be after or equal to start time" }
     }
-    
+
     val duration: java.time.Duration
         get() = java.time.Duration.between(startTime, endTime)
 }

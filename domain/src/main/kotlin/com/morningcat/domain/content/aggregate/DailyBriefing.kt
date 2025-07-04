@@ -20,29 +20,27 @@ data class DailyBriefing(
     val calendarEvents: List<CalendarEvent> = emptyList(),
     val selfImprovementTips: List<SelfImprovementTip> = emptyList(),
     val entertainmentRecommendations: List<EntertainmentRecommendation> = emptyList(),
-    val generatedAt: LocalDateTime = LocalDateTime.now()
+    val generatedAt: LocalDateTime = LocalDateTime.now(),
 ) {
     init {
         require(hasContent()) { "Daily briefing must contain at least one piece of content" }
     }
-    
-    fun hasContent(): Boolean {
-        return news.isNotEmpty() ||
-               weather != null ||
-               financialQuotes.isNotEmpty() ||
-               calendarEvents.isNotEmpty() ||
-               selfImprovementTips.isNotEmpty() ||
-               entertainmentRecommendations.isNotEmpty()
-    }
-    
-    fun contentCount(): Int {
-        return news.size +
-               (if (weather != null) 1 else 0) +
-               financialQuotes.size +
-               calendarEvents.size +
-               selfImprovementTips.size +
-               entertainmentRecommendations.size
-    }
-    
+
+    fun hasContent(): Boolean =
+        news.isNotEmpty() ||
+            weather != null ||
+            financialQuotes.isNotEmpty() ||
+            calendarEvents.isNotEmpty() ||
+            selfImprovementTips.isNotEmpty() ||
+            entertainmentRecommendations.isNotEmpty()
+
+    fun contentCount(): Int =
+        news.size +
+            (if (weather != null) 1 else 0) +
+            financialQuotes.size +
+            calendarEvents.size +
+            selfImprovementTips.size +
+            entertainmentRecommendations.size
+
     fun isEmpty(): Boolean = !hasContent()
 }

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm")
+    alias(libs.plugins.kotlin.jvm)
     application
 }
 
@@ -12,23 +12,22 @@ dependencies {
     implementation(project(":application"))
     implementation(project(":infrastructure"))
     implementation(project(":presentation"))
-    implementation(kotlin("stdlib"))
-    
+    implementation(libs.kotlin.stdlib)
+
     // DI - Koin
-    implementation("io.insert-koin:koin-core:4.0.0")
-    implementation("io.insert-koin:koin-ktor:4.0.0")
-    implementation("io.insert-koin:koin-logger-slf4j:4.0.0")
-    
+    implementation(libs.koin.core)
+    implementation(libs.koin.ktor)
+    implementation(libs.koin.logger.slf4j)
+
     // Configuration
-    implementation("com.sksamuel.hoplite:hoplite-core:2.9.0")
-    implementation("com.sksamuel.hoplite:hoplite-yaml:2.9.0")
-    
+    implementation(libs.hoplite.core)
+    implementation(libs.hoplite.yaml)
+
     // Logging
-    implementation("ch.qos.logback:logback-classic:1.5.12")
-    
-    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
-    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
-    testImplementation("io.insert-koin:koin-test:4.0.0")
+    implementation(libs.logback.classic)
+
+    testImplementation(libs.bundles.kotest)
+    testImplementation(libs.koin.test)
 }
 
 tasks.test {

@@ -46,12 +46,12 @@ class UpdateSubscriptionSettingsCommandHandler(
         }
 
         val contentPreferences = mapOf(
-            ContentCategory.News to dto.content.includeNews,
-            ContentCategory.Finance to dto.content.includeEconomicIndicators,
-            ContentCategory.Weather to dto.content.includeWeather,
-            ContentCategory.Calendar to dto.content.includeSchedule,
-            ContentCategory.SelfImprovement to dto.content.includeSelfImprovement,
-            ContentCategory.Entertainment to dto.content.includeEntertainment
+            ContentCategory.NEWS to dto.content.includeNews,
+            ContentCategory.FINANCE to dto.content.includeEconomicIndicators,
+            ContentCategory.WEATHER to dto.content.includeWeather,
+            ContentCategory.CALENDAR to dto.content.includeSchedule,
+            ContentCategory.SELF_IMPROVEMENT to dto.content.includeSelfImprovement,
+            ContentCategory.ENTERTAINMENT to dto.content.includeEntertainment
         )
 
         // Call the aggregate's updateSettings method

@@ -32,9 +32,9 @@ class SubscriptionTest :
             subscription.isWeekendDeliveryEnabled() shouldBe true
 
             // Check default content preferences
-            subscription.isContentSelected(ContentCategory.News) shouldBe true
-            subscription.isContentSelected(ContentCategory.Weather) shouldBe true
-            subscription.isContentSelected(ContentCategory.Finance) shouldBe false
+            subscription.isContentSelected(ContentCategory.NEWS) shouldBe true
+            subscription.isContentSelected(ContentCategory.WEATHER) shouldBe true
+            subscription.isContentSelected(ContentCategory.FINANCE) shouldBe false
         }
 
         "should create subscription with custom settings" {
@@ -42,8 +42,8 @@ class SubscriptionTest :
             val channels = setOf(DeliveryChannelType.Email, DeliveryChannelType.PushNotification)
             val contentPrefs =
                 mapOf(
-                    ContentCategory.News to false,
-                    ContentCategory.Finance to true,
+                    ContentCategory.NEWS to false,
+                    ContentCategory.FINANCE to true,
                 )
 
             val subscription =
@@ -60,7 +60,7 @@ class SubscriptionTest :
 
             subscription.getDeliveryTime() shouldBe deliveryTime
             subscription.getDeliveryChannels() shouldBe channels
-            subscription.isContentSelected(ContentCategory.Finance) shouldBe true
+            subscription.isContentSelected(ContentCategory.FINANCE) shouldBe true
             subscription.getFinancialPreferences() shouldBe setOf("AAPL", "GOOGL")
             subscription.isEnabled() shouldBe false
             subscription.isWeekendDeliveryEnabled() shouldBe false
@@ -95,11 +95,7 @@ class SubscriptionTest :
         }
 
         "should require at least one content category enabled" {
-            val allDisabled =
-                ContentCategory::class
-                    .sealedSubclasses
-                    .mapNotNull { it.objectInstance }
-                    .associateWith { false }
+            val allDisabled = ContentCategory.values().associateWith { false }
 
             shouldThrow<IllegalArgumentException> {
                 Subscription.create(
@@ -117,12 +113,12 @@ class SubscriptionTest :
             val newLocation = Location("Tokyo", "JP")
             val newChannels = setOf(DeliveryChannelType.PushNotification)
             val newContentPrefs = mapOf(
-                ContentCategory.News to false,
-                ContentCategory.Weather to false,
-                ContentCategory.Finance to true,
-                ContentCategory.Calendar to true,
-                ContentCategory.SelfImprovement to false,
-                ContentCategory.Entertainment to false,
+                ContentCategory.NEWS to false,
+                ContentCategory.WEATHER to false,
+                ContentCategory.FINANCE to true,
+                ContentCategory.CALENDAR to true,
+                ContentCategory.SELF_IMPROVEMENT to false,
+                ContentCategory.ENTERTAINMENT to false,
             )
             val newTickers = setOf("MSFT", "AMZN")
 
@@ -155,7 +151,7 @@ class SubscriptionTest :
                     newDeliveryTime = LocalTime.of(3, 0), // Too early
                     weekendDelivery = true,
                     newDeliveryChannels = setOf(DeliveryChannelType.Email),
-                    newContentPreferences = mapOf(ContentCategory.News to true),
+                    newContentPreferences = mapOf(ContentCategory.NEWS to true),
                     newFinancialInstruments = emptySet(),
                 )
             }.message shouldBe "Delivery time must be between 5:00 AM and 10:00 PM"
@@ -171,7 +167,7 @@ class SubscriptionTest :
                     newDeliveryTime = LocalTime.of(7, 0),
                     weekendDelivery = true,
                     newDeliveryChannels = emptySet(),
-                    newContentPreferences = mapOf(ContentCategory.News to true),
+                    newContentPreferences = mapOf(ContentCategory.NEWS to true),
                     newFinancialInstruments = emptySet(),
                 )
             }.message shouldBe "At least one delivery channel must be selected"
@@ -179,10 +175,7 @@ class SubscriptionTest :
 
         "should fail updateSettings with all content disabled" {
             val subscription = Subscription.create(userId = userId, location = location)
-            val allDisabled = ContentCategory::class
-                .sealedSubclasses
-                .mapNotNull { it.objectInstance }
-                .associateWith { false }
+            val allDisabled = ContentCategory.values().associateWith { false }
 
             shouldThrow<IllegalArgumentException> {
                 subscription.updateSettings(
@@ -218,11 +211,11 @@ class SubscriptionTest :
         "should select and deselect content categories" {
             val subscription = Subscription.create(userId = userId, location = location)
 
-            subscription.selectContent(ContentCategory.Finance)
-            subscription.isContentSelected(ContentCategory.Finance) shouldBe true
+            subscription.selectContent(ContentCategory.FINANCE)
+            subscription.isContentSelected(ContentCategory.FINANCE) shouldBe true
 
-            subscription.deselectContent(ContentCategory.News)
-            subscription.isContentSelected(ContentCategory.News) shouldBe false
+            subscription.deselectContent(ContentCategory.NEWS)
+            subscription.isContentSelected(ContentCategory.NEWS) shouldBe false
         }
 
         "should prevent deselecting last content category" {
@@ -232,13 +225,13 @@ class SubscriptionTest :
                     location = location,
                     contentPreferences =
                         mapOf(
-                            ContentCategory.News to true,
-                            ContentCategory.Weather to false,
+                            ContentCategory.NEWS to true,
+                            ContentCategory.WEATHER to false,
                         ),
                 )
 
             shouldThrow<IllegalArgumentException> {
-                subscription.deselectContent(ContentCategory.News)
+                subscription.deselectContent(ContentCategory.NEWS)
             }.message shouldBe "At least one content category must remain enabled"
         }
 

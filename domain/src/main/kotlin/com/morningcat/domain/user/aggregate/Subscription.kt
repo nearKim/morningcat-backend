@@ -152,12 +152,12 @@ class Subscription private constructor(
 
         private fun defaultContentPreferences(): Map<ContentCategory, Boolean> =
             mapOf(
-                ContentCategory.News to true,
-                ContentCategory.Weather to true,
-                ContentCategory.Finance to false,
-                ContentCategory.Calendar to false,
-                ContentCategory.SelfImprovement to false,
-                ContentCategory.Entertainment to false,
+                ContentCategory.NEWS to true,
+                ContentCategory.WEATHER to true,
+                ContentCategory.FINANCE to false,
+                ContentCategory.CALENDAR to false,
+                ContentCategory.SELF_IMPROVEMENT to false,
+                ContentCategory.ENTERTAINMENT to false,
             )
     }
 

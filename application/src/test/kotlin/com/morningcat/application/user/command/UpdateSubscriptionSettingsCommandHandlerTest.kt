@@ -74,12 +74,12 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
                 weekendDelivery = true,
                 newDeliveryChannels = setOf(DeliveryChannelType.Email, DeliveryChannelType.PushNotification),
                 newContentPreferences = mapOf(
-                    ContentCategory.News to true,
-                    ContentCategory.Finance to true,
-                    ContentCategory.Weather to true,
-                    ContentCategory.Calendar to false,
-                    ContentCategory.SelfImprovement to false,
-                    ContentCategory.Entertainment to false
+                    ContentCategory.NEWS to true,
+                    ContentCategory.FINANCE to true,
+                    ContentCategory.WEATHER to true,
+                    ContentCategory.CALENDAR to false,
+                    ContentCategory.SELF_IMPROVEMENT to false,
+                    ContentCategory.ENTERTAINMENT to false
                 ),
                 newFinancialInstruments = setOf("AAPL", "GOOGL")
             )
@@ -316,12 +316,12 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
         }
 
         val capturedContentPrefs = contentSlot.captured
-        capturedContentPrefs[ContentCategory.News] shouldBe false
-        capturedContentPrefs[ContentCategory.Finance] shouldBe true
-        capturedContentPrefs[ContentCategory.Weather] shouldBe false
-        capturedContentPrefs[ContentCategory.Calendar] shouldBe true
-        capturedContentPrefs[ContentCategory.SelfImprovement] shouldBe true
-        capturedContentPrefs[ContentCategory.Entertainment] shouldBe true
+        capturedContentPrefs[ContentCategory.NEWS] shouldBe false
+        capturedContentPrefs[ContentCategory.FINANCE] shouldBe true
+        capturedContentPrefs[ContentCategory.WEATHER] shouldBe false
+        capturedContentPrefs[ContentCategory.CALENDAR] shouldBe true
+        capturedContentPrefs[ContentCategory.SELF_IMPROVEMENT] shouldBe true
+        capturedContentPrefs[ContentCategory.ENTERTAINMENT] shouldBe true
     }
 
     "should handle empty financial instruments" {

@@ -1,9 +1,9 @@
 package com.morningcat.application.user.command
 
+import com.morningcat.application.common.Command
 import com.morningcat.application.user.dto.UserSettingsDto
-import com.morningcat.domain.user.valueobject.UserId
 
 data class UpdateSubscriptionSettingsCommand(
-    val userId: UserId,
-    val settings: UserSettingsDto
-)
+    val userId: String,
+    val settingsDto: UserSettingsDto
+) : Command

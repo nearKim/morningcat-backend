@@ -3,6 +3,7 @@ package com.morningcat.infrastructure.provider.task
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import arrow.core.raise.either
 import com.morningcat.domain.common.error.ProviderError
 import com.morningcat.domain.content.entity.Task
 import com.morningcat.domain.content.ports.TaskProvider
@@ -29,51 +30,49 @@ class TodoistAdapter(
     override suspend fun getTasks(
         user: User,
         date: LocalDate
-    ): Either<ProviderError, List<Task>> {
-        return try {
-            // Todoist filter format for specific date
-            val filter = URLEncoder.encode("due: ${date.format(DateTimeFormatter.ISO_LOCAL_DATE)}", "UTF-8")
-            
-            val response = httpClient.get("$baseUrl/tasks") {
+    ): Either<ProviderError, List<Task>> = either {
+        // Todoist filter format for specific date
+        val filter = URLEncoder.encode("due: ${date.format(DateTimeFormatter.ISO_LOCAL_DATE)}", "UTF-8")
+        
+        val response = try {
+            httpClient.get("$baseUrl/tasks") {
                 parameter("filter", filter)
                 headers {
                     append(HttpHeaders.Authorization, "Bearer $apiToken")
                 }
             }
-            
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    val todoistTasks = try {
-                        response.body<List<TodoistTask>>()
-                    } catch (e: Exception) {
-                        return ProviderError.InvalidResponse("Failed to parse tasks: ${e.message}").left()
-                    }
-                    
-                    val tasks = todoistTasks.mapNotNull { todoistTask ->
-                        parseTask(todoistTask)
-                    }
-                    
-                    tasks.right()
+        } catch (e: Exception) {
+            raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
+        }
+        
+        when (response.status) {
+            HttpStatusCode.OK -> {
+                val todoistTasks = try {
+                    response.body<List<TodoistTask>>()
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Failed to parse tasks: ${e.message}"))
                 }
-                HttpStatusCode.Unauthorized -> {
-                    ProviderError.AuthenticationError("Todoist").left()
-                }
-                HttpStatusCode.TooManyRequests -> {
-                    val resetTime = response.headers["X-RateLimit-Reset"]?.toLongOrNull()
-                    ProviderError.RateLimitExceeded(resetTime).left()
-                }
-                HttpStatusCode.InternalServerError,
-                HttpStatusCode.BadGateway,
-                HttpStatusCode.ServiceUnavailable,
-                HttpStatusCode.GatewayTimeout -> {
-                    ProviderError.ServiceUnavailable("Todoist").left()
-                }
-                else -> {
-                    ProviderError.ServiceUnavailable("Todoist").left()
+                
+                todoistTasks.mapNotNull { todoistTask ->
+                    parseTask(todoistTask)
                 }
             }
-        } catch (e: Exception) {
-            ProviderError.NetworkError(e.message ?: "Unknown error").left()
+            HttpStatusCode.Unauthorized -> {
+                raise(ProviderError.AuthenticationError("Todoist"))
+            }
+            HttpStatusCode.TooManyRequests -> {
+                val resetTime = response.headers["X-RateLimit-Reset"]?.toLongOrNull()
+                raise(ProviderError.RateLimitExceeded(resetTime))
+            }
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout -> {
+                raise(ProviderError.ServiceUnavailable("Todoist"))
+            }
+            else -> {
+                raise(ProviderError.ServiceUnavailable("Todoist"))
+            }
         }
     }
     

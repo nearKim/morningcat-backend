@@ -3,6 +3,8 @@ package com.morningcat.infrastructure.provider.calendar
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import arrow.core.raise.either
+import arrow.core.raise.ensure
 import com.morningcat.domain.common.error.ProviderError
 import com.morningcat.domain.content.entity.CalendarEvent
 import com.morningcat.domain.content.ports.CalendarProvider
@@ -29,52 +31,50 @@ class GoogleCalendarAdapter(
     override suspend fun getEvents(
         user: User,
         date: LocalDate
-    ): Either<ProviderError, List<CalendarEvent>> {
-        return try {
-            val timeMin = date.atStartOfDay(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT)
-            val timeMax = date.atTime(23, 59, 59).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT)
-            
-            val response = httpClient.get("$baseUrl/calendars/primary/events") {
+    ): Either<ProviderError, List<CalendarEvent>> = either {
+        val timeMin = date.atStartOfDay(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT)
+        val timeMax = date.atTime(23, 59, 59).atZone(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT)
+        
+        val response = try {
+            httpClient.get("$baseUrl/calendars/primary/events") {
                 parameter("key", apiKey)
                 parameter("timeMin", timeMin)
                 parameter("timeMax", timeMax)
                 parameter("singleEvents", true)
                 parameter("orderBy", "startTime")
             }
-            
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    val eventsResponse = try {
-                        response.body<EventsResponse>()
-                    } catch (e: Exception) {
-                        return ProviderError.InvalidResponse("Failed to parse calendar events: ${e.message}").left()
-                    }
-                    
-                    val events = eventsResponse.items.mapNotNull { item ->
-                        parseEvent(item)
-                    }
-                    
-                    events.right()
+        } catch (e: Exception) {
+            raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
+        }
+        
+        when (response.status) {
+            HttpStatusCode.OK -> {
+                val eventsResponse = try {
+                    response.body<EventsResponse>()
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Failed to parse calendar events: ${e.message}"))
                 }
-                HttpStatusCode.Unauthorized -> {
-                    ProviderError.AuthenticationError("Google Calendar").left()
-                }
-                HttpStatusCode.TooManyRequests -> {
-                    val retryAfter = response.headers["Retry-After"]?.toLongOrNull()
-                    ProviderError.RateLimitExceeded(retryAfter).left()
-                }
-                HttpStatusCode.InternalServerError,
-                HttpStatusCode.BadGateway,
-                HttpStatusCode.ServiceUnavailable,
-                HttpStatusCode.GatewayTimeout -> {
-                    ProviderError.ServiceUnavailable("Google Calendar").left()
-                }
-                else -> {
-                    ProviderError.ServiceUnavailable("Google Calendar").left()
+                
+                eventsResponse.items.mapNotNull { item ->
+                    parseEvent(item)
                 }
             }
-        } catch (e: Exception) {
-            ProviderError.NetworkError(e.message ?: "Unknown error").left()
+            HttpStatusCode.Unauthorized -> {
+                raise(ProviderError.AuthenticationError("Google Calendar"))
+            }
+            HttpStatusCode.TooManyRequests -> {
+                val retryAfter = response.headers["Retry-After"]?.toLongOrNull()
+                raise(ProviderError.RateLimitExceeded(retryAfter))
+            }
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout -> {
+                raise(ProviderError.ServiceUnavailable("Google Calendar"))
+            }
+            else -> {
+                raise(ProviderError.ServiceUnavailable("Google Calendar"))
+            }
         }
     }
     

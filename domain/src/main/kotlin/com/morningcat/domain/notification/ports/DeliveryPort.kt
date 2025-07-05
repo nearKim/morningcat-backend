@@ -10,6 +10,6 @@ interface DeliveryPort {
     suspend fun send(
         briefing: DailyBriefing,
         user: User,
-        channel: DeliveryChannelType
+        channel: DeliveryChannelType,
     ): Either<DeliveryError, Unit>
 }

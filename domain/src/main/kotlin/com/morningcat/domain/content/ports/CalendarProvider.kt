@@ -7,5 +7,8 @@ import com.morningcat.domain.user.aggregate.User
 import java.time.LocalDate
 
 interface CalendarProvider {
-    suspend fun getEvents(user: User, date: LocalDate): Either<ProviderError, List<CalendarEvent>>
+    suspend fun getEvents(
+        user: User,
+        date: LocalDate,
+    ): Either<ProviderError, List<CalendarEvent>>
 }

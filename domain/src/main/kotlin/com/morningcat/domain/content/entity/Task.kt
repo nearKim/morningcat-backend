@@ -7,7 +7,7 @@ data class Task(
     val description: String?,
     val dueDate: LocalDateTime?,
     val priority: Priority,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
 ) {
     init {
         require(title.isNotBlank()) { "Task title cannot be blank" }
@@ -16,6 +16,6 @@ data class Task(
     enum class Priority {
         HIGH,
         MEDIUM,
-        LOW
+        LOW,
     }
 }

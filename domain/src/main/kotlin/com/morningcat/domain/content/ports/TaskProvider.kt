@@ -7,5 +7,8 @@ import com.morningcat.domain.user.aggregate.User
 import java.time.LocalDate
 
 interface TaskProvider {
-    suspend fun getTasks(user: User, date: LocalDate): Either<ProviderError, List<Task>>
+    suspend fun getTasks(
+        user: User,
+        date: LocalDate,
+    ): Either<ProviderError, List<Task>>
 }

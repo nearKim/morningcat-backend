@@ -43,6 +43,7 @@ out/
 # Kotlin
 *.class
 *.kotlin_module
+.kotlin/
 
 # Package Files
 *.jar

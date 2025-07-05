@@ -29,6 +29,7 @@ class SubscriptionTest :
             subscription.getLocation() shouldBe location
             subscription.getDeliveryChannels() shouldBe setOf(DeliveryChannelType.Email)
             subscription.isEnabled() shouldBe true
+            subscription.isWeekendDeliveryEnabled() shouldBe true
 
             // Check default content preferences
             subscription.isContentSelected(ContentCategory.News) shouldBe true
@@ -54,6 +55,7 @@ class SubscriptionTest :
                     contentPreferences = contentPrefs,
                     financialPreferences = setOf("AAPL", "GOOGL"),
                     isEnabled = false,
+                    weekendDelivery = false,
                 )
 
             subscription.getDeliveryTime() shouldBe deliveryTime
@@ -61,6 +63,7 @@ class SubscriptionTest :
             subscription.isContentSelected(ContentCategory.Finance) shouldBe true
             subscription.getFinancialPreferences() shouldBe setOf("AAPL", "GOOGL")
             subscription.isEnabled() shouldBe false
+            subscription.isWeekendDeliveryEnabled() shouldBe false
         }
 
         "should validate delivery time range" {
@@ -113,19 +116,85 @@ class SubscriptionTest :
             val newTime = LocalTime.of(9, 0)
             val newLocation = Location("Tokyo", "JP")
             val newChannels = setOf(DeliveryChannelType.PushNotification)
+            val newContentPrefs = mapOf(
+                ContentCategory.News to false,
+                ContentCategory.Weather to false,
+                ContentCategory.Finance to true,
+                ContentCategory.Calendar to true,
+                ContentCategory.SelfImprovement to false,
+                ContentCategory.Entertainment to false,
+            )
             val newTickers = setOf("MSFT", "AMZN")
 
             subscription.updateSettings(
-                newDeliveryTime = newTime,
+                isEnabled = false,
                 newLocation = newLocation,
+                newDeliveryTime = newTime,
+                weekendDelivery = false,
                 newDeliveryChannels = newChannels,
-                newFinancialPreferences = newTickers,
+                newContentPreferences = newContentPrefs,
+                newFinancialInstruments = newTickers,
             )
 
+            subscription.isEnabled() shouldBe false
             subscription.getDeliveryTime() shouldBe newTime
             subscription.getLocation() shouldBe newLocation
+            subscription.isWeekendDeliveryEnabled() shouldBe false
             subscription.getDeliveryChannels() shouldBe newChannels
+            subscription.getContentPreferences() shouldBe newContentPrefs
             subscription.getFinancialPreferences() shouldBe setOf("MSFT", "AMZN")
+        }
+
+        "should fail updateSettings with invalid delivery time" {
+            val subscription = Subscription.create(userId = userId, location = location)
+
+            shouldThrow<IllegalArgumentException> {
+                subscription.updateSettings(
+                    isEnabled = true,
+                    newLocation = location,
+                    newDeliveryTime = LocalTime.of(3, 0), // Too early
+                    weekendDelivery = true,
+                    newDeliveryChannels = setOf(DeliveryChannelType.Email),
+                    newContentPreferences = mapOf(ContentCategory.News to true),
+                    newFinancialInstruments = emptySet(),
+                )
+            }.message shouldBe "Delivery time must be between 5:00 AM and 10:00 PM"
+        }
+
+        "should fail updateSettings with empty delivery channels" {
+            val subscription = Subscription.create(userId = userId, location = location)
+
+            shouldThrow<IllegalArgumentException> {
+                subscription.updateSettings(
+                    isEnabled = true,
+                    newLocation = location,
+                    newDeliveryTime = LocalTime.of(7, 0),
+                    weekendDelivery = true,
+                    newDeliveryChannels = emptySet(),
+                    newContentPreferences = mapOf(ContentCategory.News to true),
+                    newFinancialInstruments = emptySet(),
+                )
+            }.message shouldBe "At least one delivery channel must be selected"
+        }
+
+        "should fail updateSettings with all content disabled" {
+            val subscription = Subscription.create(userId = userId, location = location)
+            val allDisabled = ContentCategory::class
+                .sealedSubclasses
+                .mapNotNull { it.objectInstance }
+                .associateWith { false }
+
+            shouldThrow<IllegalArgumentException> {
+                subscription.updateSettings(
+                    isEnabled = true,
+                    newLocation = location,
+                    newDeliveryTime = LocalTime.of(7, 0),
+                    weekendDelivery = true,
+                    newDeliveryChannels = setOf(DeliveryChannelType.Email),
+                    newContentPreferences = allDisabled,
+                    newFinancialInstruments = emptySet(),
+                )
+            }.message shouldBe "At least one content category must be enabled"
         }
 
         "should enable and disable subscription" {

@@ -14,6 +14,7 @@ class Subscription private constructor(
     private var contentPreferences: Map<ContentCategory, Boolean>,
     private var financialPreferences: Set<String>,
     private var isEnabled: Boolean,
+    private var weekendDelivery: Boolean,
 ) {
     init {
         require(deliveryChannels.isNotEmpty()) {
@@ -38,36 +39,48 @@ class Subscription private constructor(
 
     fun isEnabled(): Boolean = isEnabled
 
+    fun isWeekendDeliveryEnabled(): Boolean = weekendDelivery
+
     // Behavior methods
     fun updateSettings(
-        newDeliveryTime: LocalTime? = null,
-        newLocation: Location? = null,
-        newDeliveryChannels: Set<DeliveryChannelType>? = null,
-        newFinancialPreferences: Set<String>? = null,
+        isEnabled: Boolean,
+        newLocation: Location,
+        newDeliveryTime: LocalTime,
+        weekendDelivery: Boolean,
+        newDeliveryChannels: Set<DeliveryChannelType>,
+        newContentPreferences: Map<ContentCategory, Boolean>,
+        newFinancialInstruments: Set<String>
     ) {
-        newDeliveryTime?.let {
-            validateDeliveryTime(it)
-            deliveryTime = it
-        }
+        // Update enabled status
+        this.isEnabled = isEnabled
 
-        newLocation?.let {
-            location = it
-        }
+        // Update location
+        this.location = newLocation
 
-        newDeliveryChannels?.let { channels ->
-            require(channels.isNotEmpty()) {
-                "At least one delivery channel must be selected"
-            }
-            deliveryChannels = channels.toSet()
-        }
+        // Update delivery time with validation
+        validateDeliveryTime(newDeliveryTime)
+        this.deliveryTime = newDeliveryTime
 
-        newFinancialPreferences?.let { prefs ->
-            financialPreferences =
-                prefs
-                    .map { it.trim().uppercase() }
-                    .filter { it.isNotBlank() }
-                    .toSet()
+        // Update weekend delivery preference
+        this.weekendDelivery = weekendDelivery
+
+        // Update delivery channels with validation
+        require(newDeliveryChannels.isNotEmpty()) {
+            "At least one delivery channel must be selected"
         }
+        this.deliveryChannels = newDeliveryChannels.toSet()
+
+        // Update content preferences with validation
+        require(newContentPreferences.values.any { it }) {
+            "At least one content category must be enabled"
+        }
+        this.contentPreferences = newContentPreferences.toMap()
+
+        // Update financial instruments
+        this.financialPreferences = newFinancialInstruments
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() }
+            .toSet()
     }
 
     fun enable() {
@@ -124,6 +137,7 @@ class Subscription private constructor(
             contentPreferences: Map<ContentCategory, Boolean> = defaultContentPreferences(),
             financialPreferences: Set<String> = emptySet(),
             isEnabled: Boolean = true,
+            weekendDelivery: Boolean = true,
         ): Subscription =
             Subscription(
                 userId = userId,
@@ -133,6 +147,7 @@ class Subscription private constructor(
                 contentPreferences = contentPreferences.toMap(),
                 financialPreferences = financialPreferences.map { it.trim().uppercase() }.toSet(),
                 isEnabled = isEnabled,
+                weekendDelivery = weekendDelivery,
             )
 
         private fun defaultContentPreferences(): Map<ContentCategory, Boolean> =

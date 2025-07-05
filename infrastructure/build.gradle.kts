@@ -40,6 +40,7 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.h2database)
+    testImplementation(libs.mockwebserver)
 }
 
 tasks.test {

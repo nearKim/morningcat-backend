@@ -19,23 +19,24 @@ import kotlin.math.roundToInt
 
 class OpenWeatherMapProvider(
     private val httpClient: HttpClient,
-    private val apiKey: String
+    private val apiKey: String,
+    private val baseUrl: String = "https://api.openweathermap.org"
 ) : WeatherProvider {
     
     companion object {
-        private const val BASE_URL = "https://api.openweathermap.org/data/2.5"
+        private const val API_PATH = "/data/2.5"
     }
     
     override suspend fun fetchWeather(location: Location): Either<ProviderError, WeatherInfo> {
         return try {
-            val response = httpClient.get("$BASE_URL/weather") {
+            val response = httpClient.get("$baseUrl$API_PATH/weather") {
                 parameter("q", "${location.city},${location.countryCode}")
                 parameter("appid", apiKey)
                 parameter("units", "metric")
             }
             
             when (response.status) {
-                HttpStatusCode.OK -> parseWeatherResponse(response)
+                HttpStatusCode.OK -> parseWeatherResponse(response, location)
                 HttpStatusCode.Unauthorized -> {
                     val errorResponse = response.body<ErrorResponse>()
                     ProviderError.AuthenticationError(errorResponse.message).left()
@@ -53,13 +54,20 @@ class OpenWeatherMapProvider(
         }
     }
     
-    private suspend fun parseWeatherResponse(response: HttpResponse): Either<ProviderError, WeatherInfo> {
+    private suspend fun parseWeatherResponse(response: HttpResponse, location: Location): Either<ProviderError, WeatherInfo> {
         return try {
             val weatherResponse = response.body<WeatherResponse>()
             
-            // Fetch UV index separately (requires a different endpoint in OpenWeatherMap)
-            // For simplicity, we'll use a default value in this example
-            val uvIndex = 5 // Would normally fetch from UV endpoint
+            // Extract coordinates from the weather response
+            val lat = weatherResponse.coord?.lat
+            val lon = weatherResponse.coord?.lon
+            
+            // Fetch UV index if coordinates are available
+            val uvIndex = if (lat != null && lon != null) {
+                fetchUvIndex(lat, lon)
+            } else {
+                5 // Default value if coordinates are not available
+            }
             
             WeatherInfo(
                 date = LocalDate.now(),
@@ -78,11 +86,37 @@ class OpenWeatherMapProvider(
         }
     }
     
+    private suspend fun fetchUvIndex(lat: Double, lon: Double): Int {
+        return try {
+            val response = httpClient.get("$baseUrl$API_PATH/uvi") {
+                parameter("lat", lat)
+                parameter("lon", lon)
+                parameter("appid", apiKey)
+            }
+            
+            if (response.status == HttpStatusCode.OK) {
+                val uvResponse = response.body<UvResponse>()
+                uvResponse.value.roundToInt()
+            } else {
+                5 // Default value on error
+            }
+        } catch (e: Exception) {
+            5 // Default value on error
+        }
+    }
+    
     @Serializable
     private data class WeatherResponse(
         val weather: List<WeatherCondition>,
         val main: MainWeatherData,
-        val rain: RainData? = null
+        val rain: RainData? = null,
+        val coord: Coordinates? = null
+    )
+    
+    @Serializable
+    private data class Coordinates(
+        val lat: Double,
+        val lon: Double
     )
     
     @Serializable
@@ -110,5 +144,10 @@ class OpenWeatherMapProvider(
     @Serializable
     private data class ErrorResponse(
         val message: String
+    )
+    
+    @Serializable
+    private data class UvResponse(
+        val value: Double
     )
 }

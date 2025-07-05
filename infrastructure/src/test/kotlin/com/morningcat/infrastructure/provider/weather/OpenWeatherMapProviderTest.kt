@@ -71,7 +71,7 @@ class OpenWeatherMapProviderTest : StringSpec({
             }
         }
         
-        val provider = OpenWeatherMapProvider(client, apiKey)
+        val provider = OpenWeatherMapProvider(client, apiKey, "https://api.openweathermap.org")
         
         // When
         val result = provider.fetchWeather(location)
@@ -102,7 +102,7 @@ class OpenWeatherMapProviderTest : StringSpec({
             throw Exception("Network error")
         }
         
-        val provider = OpenWeatherMapProvider(client, apiKey)
+        val provider = OpenWeatherMapProvider(client, apiKey, "https://api.openweathermap.org")
         
         // When
         val result = provider.fetchWeather(location)
@@ -125,7 +125,7 @@ class OpenWeatherMapProviderTest : StringSpec({
             )
         }
         
-        val provider = OpenWeatherMapProvider(client, apiKey)
+        val provider = OpenWeatherMapProvider(client, apiKey, "https://api.openweathermap.org")
         
         // When
         val result = provider.fetchWeather(location)
@@ -151,7 +151,7 @@ class OpenWeatherMapProviderTest : StringSpec({
             )
         }
         
-        val provider = OpenWeatherMapProvider(client, apiKey)
+        val provider = OpenWeatherMapProvider(client, apiKey, "https://api.openweathermap.org")
         
         // When
         val result = provider.fetchWeather(location)
@@ -176,7 +176,7 @@ class OpenWeatherMapProviderTest : StringSpec({
             )
         }
         
-        val provider = OpenWeatherMapProvider(client, apiKey)
+        val provider = OpenWeatherMapProvider(client, apiKey, "https://api.openweathermap.org")
         
         // When
         val result = provider.fetchWeather(location)

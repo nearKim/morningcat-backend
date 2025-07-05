@@ -55,7 +55,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
         coEvery { repository.save(subscription) } just Runs
@@ -115,7 +115,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns null
 
@@ -156,7 +156,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
 
@@ -198,7 +198,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
         every {
@@ -246,7 +246,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
         every {
@@ -292,7 +292,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
         coEvery { repository.save(subscription) } just Runs
@@ -353,7 +353,7 @@ class UpdateSubscriptionSettingsCommandHandlerTest : StringSpec({
             )
         )
 
-        val command = UpdateSubscriptionSettingsCommand(userId, dto)
+        val command = UpdateSubscriptionSettingsCommand(userId.value.toString(), settingsDto = dto)
 
         coEvery { repository.findByUserId(userId) } returns subscription
         coEvery { repository.save(subscription) } just Runs

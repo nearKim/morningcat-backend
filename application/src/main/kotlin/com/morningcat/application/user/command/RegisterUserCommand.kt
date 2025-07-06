@@ -5,5 +5,5 @@ import com.morningcat.application.common.Command
 data class RegisterUserCommand(
     val email: String,
     val name: String,
-    val initialPassword: String
+    val initialPassword: String,
 ) : Command

@@ -20,21 +20,21 @@ import kotlin.math.roundToInt
 class OpenWeatherMapProvider(
     private val httpClient: HttpClient,
     private val apiKey: String,
-    private val baseUrl: String = "https://api.openweathermap.org"
+    private val baseUrl: String = "https://api.openweathermap.org",
 ) : WeatherProvider {
-    
     companion object {
         private const val API_PATH = "/data/2.5"
     }
-    
-    override suspend fun fetchWeather(location: Location): Either<ProviderError, WeatherInfo> {
-        return try {
-            val response = httpClient.get("$baseUrl$API_PATH/weather") {
-                parameter("q", "${location.city},${location.countryCode}")
-                parameter("appid", apiKey)
-                parameter("units", "metric")
-            }
-            
+
+    override suspend fun fetchWeather(location: Location): Either<ProviderError, WeatherInfo> =
+        try {
+            val response =
+                httpClient.get("$baseUrl$API_PATH/weather") {
+                    parameter("q", "${location.city},${location.countryCode}")
+                    parameter("appid", apiKey)
+                    parameter("units", "metric")
+                }
+
             when (response.status) {
                 HttpStatusCode.OK -> parseWeatherResponse(response, location)
                 HttpStatusCode.Unauthorized -> {
@@ -52,48 +52,55 @@ class OpenWeatherMapProvider(
         } catch (e: Exception) {
             ProviderError.NetworkError(e.message ?: "Unknown error").left()
         }
-    }
-    
-    private suspend fun parseWeatherResponse(response: HttpResponse, location: Location): Either<ProviderError, WeatherInfo> {
-        return try {
+
+    private suspend fun parseWeatherResponse(
+        response: HttpResponse,
+        location: Location,
+    ): Either<ProviderError, WeatherInfo> =
+        try {
             val weatherResponse = response.body<WeatherResponse>()
-            
+
             // Extract coordinates from the weather response
             val lat = weatherResponse.coord?.lat
             val lon = weatherResponse.coord?.lon
-            
+
             // Fetch UV index if coordinates are available
-            val uvIndex = if (lat != null && lon != null) {
-                fetchUvIndex(lat, lon)
-            } else {
-                5 // Default value if coordinates are not available
-            }
-            
+            val uvIndex =
+                if (lat != null && lon != null) {
+                    fetchUvIndex(lat, lon)
+                } else {
+                    5 // Default value if coordinates are not available
+                }
+
             WeatherInfo(
                 date = LocalDate.now(),
-                temperature = WeatherInfo.Temperature(
-                    min = weatherResponse.main.tempMin,
-                    max = weatherResponse.main.tempMax,
-                    current = weatherResponse.main.temp
-                ),
+                temperature =
+                    WeatherInfo.Temperature(
+                        min = weatherResponse.main.tempMin,
+                        max = weatherResponse.main.tempMax,
+                        current = weatherResponse.main.temp,
+                    ),
                 condition = weatherResponse.weather.firstOrNull()?.main ?: "Unknown",
                 humidity = weatherResponse.main.humidity,
                 uvIndex = uvIndex,
-                precipitation = (weatherResponse.rain?.oneHour ?: 0.0).roundToInt()
+                precipitation = (weatherResponse.rain?.oneHour ?: 0.0).roundToInt(),
             ).right()
         } catch (e: Exception) {
             ProviderError.InvalidResponse("Failed to parse weather data: ${e.message}").left()
         }
-    }
-    
-    private suspend fun fetchUvIndex(lat: Double, lon: Double): Int {
-        return try {
-            val response = httpClient.get("$baseUrl$API_PATH/uvi") {
-                parameter("lat", lat)
-                parameter("lon", lon)
-                parameter("appid", apiKey)
-            }
-            
+
+    private suspend fun fetchUvIndex(
+        lat: Double,
+        lon: Double,
+    ): Int =
+        try {
+            val response =
+                httpClient.get("$baseUrl$API_PATH/uvi") {
+                    parameter("lat", lat)
+                    parameter("lon", lon)
+                    parameter("appid", apiKey)
+                }
+
             if (response.status == HttpStatusCode.OK) {
                 val uvResponse = response.body<UvResponse>()
                 uvResponse.value.roundToInt()
@@ -103,28 +110,27 @@ class OpenWeatherMapProvider(
         } catch (e: Exception) {
             5 // Default value on error
         }
-    }
-    
+
     @Serializable
     private data class WeatherResponse(
         val weather: List<WeatherCondition>,
         val main: MainWeatherData,
         val rain: RainData? = null,
-        val coord: Coordinates? = null
+        val coord: Coordinates? = null,
     )
-    
+
     @Serializable
     private data class Coordinates(
         val lat: Double,
-        val lon: Double
+        val lon: Double,
     )
-    
+
     @Serializable
     private data class WeatherCondition(
         val main: String,
-        val description: String
+        val description: String,
     )
-    
+
     @Serializable
     private data class MainWeatherData(
         val temp: Double,
@@ -132,22 +138,22 @@ class OpenWeatherMapProvider(
         val tempMin: Double,
         @SerialName("temp_max")
         val tempMax: Double,
-        val humidity: Int
+        val humidity: Int,
     )
-    
+
     @Serializable
     private data class RainData(
         @SerialName("1h")
-        val oneHour: Double? = null
+        val oneHour: Double? = null,
     )
-    
+
     @Serializable
     private data class ErrorResponse(
-        val message: String
+        val message: String,
     )
-    
+
     @Serializable
     private data class UvResponse(
-        val value: Double
+        val value: Double,
     )
 }

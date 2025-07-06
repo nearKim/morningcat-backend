@@ -10,30 +10,35 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.Instant
 
-class ExposedUserRepository(private val database: Database) : UserRepository {
-    
-    override suspend fun findById(id: UserId): User? = 
+class ExposedUserRepository(
+    private val database: Database,
+) : UserRepository {
+    override suspend fun findById(id: UserId): User? =
         dbQuery {
-            Users.selectAll()
+            Users
+                .selectAll()
                 .where { Users.id eq id.value }
                 .singleOrNull()
                 ?.toUser()
         }
-    
-    override suspend fun findByEmail(email: EmailAddress): User? = 
+
+    override suspend fun findByEmail(email: EmailAddress): User? =
         dbQuery {
-            Users.selectAll()
+            Users
+                .selectAll()
                 .where { Users.email eq email.value }
                 .singleOrNull()
                 ?.toUser()
         }
-    
+
     override suspend fun save(user: User) {
         dbQuery {
-            val existingUser = Users.selectAll()
-                .where { Users.id eq user.id.value }
-                .singleOrNull()
-            
+            val existingUser =
+                Users
+                    .selectAll()
+                    .where { Users.id eq user.id.value }
+                    .singleOrNull()
+
             if (existingUser != null) {
                 // Update existing user
                 Users.update({ Users.id eq user.id.value }) {
@@ -53,20 +58,20 @@ class ExposedUserRepository(private val database: Database) : UserRepository {
             }
         }
     }
-    
-    private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO, database) { block() }
-    
+
+    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO, database) { block() }
+
     private fun ResultRow.toUser(): User {
         val userId = UserId(this[Users.id])
-        val email = EmailAddress.create(this[Users.email]).getOrNull()
-            ?: throw IllegalStateException("Invalid email in database: ${this[Users.email]}")
+        val email =
+            EmailAddress.create(this[Users.email]).getOrNull()
+                ?: throw IllegalStateException("Invalid email in database: ${this[Users.email]}")
         val name = this[Users.name]
-        
+
         return User.register(
             id = userId,
             email = email,
-            name = name
+            name = name,
         )
     }
 }

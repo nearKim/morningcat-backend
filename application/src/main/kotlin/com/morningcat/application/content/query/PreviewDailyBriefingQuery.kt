@@ -4,5 +4,5 @@ import com.morningcat.application.common.Query
 import com.morningcat.application.content.dto.DailyBriefingDto
 
 data class PreviewDailyBriefingQuery(
-    val userId: String
+    val userId: String,
 ) : Query<DailyBriefingDto>

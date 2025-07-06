@@ -4,5 +4,5 @@ import com.morningcat.application.common.Query
 import com.morningcat.application.user.dto.UserSettingsDto
 
 data class GetSubscriptionSettingsQuery(
-    val userId: String
+    val userId: String,
 ) : Query<UserSettingsDto>

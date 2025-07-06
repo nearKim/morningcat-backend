@@ -1,8 +1,6 @@
 package com.morningcat.infrastructure.provider.financial
 
 import arrow.core.Either
-import arrow.core.left
-import arrow.core.right
 import arrow.core.raise.either
 import com.morningcat.domain.common.error.ProviderError
 import com.morningcat.domain.content.entity.FinancialQuote
@@ -24,171 +22,189 @@ import java.time.LocalDateTime
 class AlphaVantageAdapter(
     private val httpClient: HttpClient,
     private val apiKey: String,
-    private val baseUrl: String = "https://www.alphavantage.co/query"
+    private val baseUrl: String = "https://www.alphavantage.co/query",
 ) : FinancialDataProvider {
-    
-    override suspend fun fetchQuotes(instruments: Set<String>): Either<ProviderError, List<FinancialQuote>> = either {
-        coroutineScope {
-            val quoteDeferred = instruments.map { symbol ->
-                async { fetchSingleQuote(symbol) }
-            }
-            
-            val results = try {
-                quoteDeferred.awaitAll()
-            } catch (e: Exception) {
-                raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
-            }
-            
-            val quotes = results.mapNotNull { result ->
-                when (result) {
-                    is Either.Right -> result.value
-                    is Either.Left -> null // Skip failed quotes
+    override suspend fun fetchQuotes(instruments: Set<String>): Either<ProviderError, List<FinancialQuote>> =
+        either {
+            coroutineScope {
+                val quoteDeferred =
+                    instruments.map { symbol ->
+                        async { fetchSingleQuote(symbol) }
+                    }
+
+                val results =
+                    try {
+                        quoteDeferred.awaitAll()
+                    } catch (e: Exception) {
+                        raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
+                    }
+
+                val quotes =
+                    results.mapNotNull { result ->
+                        when (result) {
+                            is Either.Right -> result.value
+                            is Either.Left -> null // Skip failed quotes
+                        }
+                    }
+
+                if (quotes.isEmpty() && instruments.isNotEmpty()) {
+                    // All quotes failed
+                    results.firstOrNull()?.let {
+                        if (it is Either.Left) raise(it.value)
+                    }
+                    raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
                 }
+
+                quotes
             }
-            
-            if (quotes.isEmpty() && instruments.isNotEmpty()) {
-                // All quotes failed
-                results.firstOrNull()?.let {
-                    if (it is Either.Left) raise(it.value)
-                }
-                raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
-            }
-            
-            quotes
         }
-    }
-    
-    private suspend fun fetchSingleQuote(symbol: String): Either<ProviderError, FinancialQuote> = either {
-        // Fetch quote data
-        val quoteResponse = try {
-            httpClient.get(baseUrl) {
-                parameter("function", "GLOBAL_QUOTE")
-                parameter("symbol", symbol)
-                parameter("apikey", apiKey)
-            }
-        } catch (e: Exception) {
-            raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
-        }
-        
-        when (quoteResponse.status) {
-            HttpStatusCode.OK -> {
-                val responseBody = quoteResponse.bodyAsText()
-                
-                // Check for rate limit
-                if (responseBody.contains("Thank you for using Alpha Vantage")) {
-                    raise(ProviderError.RateLimitExceeded(null))
-                }
-                
-                // Check for error message
-                if (responseBody.contains("Error Message")) {
-                    raise(ProviderError.InvalidResponse("Symbol not found: $symbol"))
-                }
-                
-                val quote = try {
-                    quoteResponse.body<GlobalQuoteResponse>()
+
+    private suspend fun fetchSingleQuote(symbol: String): Either<ProviderError, FinancialQuote> =
+        either {
+            // Fetch quote data
+            val quoteResponse =
+                try {
+                    httpClient.get(baseUrl) {
+                        parameter("function", "GLOBAL_QUOTE")
+                        parameter("symbol", symbol)
+                        parameter("apikey", apiKey)
+                    }
                 } catch (e: Exception) {
-                    raise(ProviderError.InvalidResponse("Failed to parse financial data: ${e.message}"))
+                    raise(ProviderError.NetworkError(e.message ?: "Unknown error"))
                 }
-                
-                // Fetch company name from overview
-                val companyName = fetchCompanyName(symbol).fold(
-                    { symbol }, // Fallback to symbol if name fetch fails
-                    { it }
-                )
-                
-                parseQuote(quote, companyName).bind()
+
+            when (quoteResponse.status) {
+                HttpStatusCode.OK -> {
+                    val responseBody = quoteResponse.bodyAsText()
+
+                    // Check for rate limit
+                    if (responseBody.contains("Thank you for using Alpha Vantage")) {
+                        raise(ProviderError.RateLimitExceeded(null))
+                    }
+
+                    // Check for error message
+                    if (responseBody.contains("Error Message")) {
+                        raise(ProviderError.InvalidResponse("Symbol not found: $symbol"))
+                    }
+
+                    val quote =
+                        try {
+                            quoteResponse.body<GlobalQuoteResponse>()
+                        } catch (e: Exception) {
+                            raise(ProviderError.InvalidResponse("Failed to parse financial data: ${e.message}"))
+                        }
+
+                    // Fetch company name from overview
+                    val companyName =
+                        fetchCompanyName(symbol).fold(
+                            { symbol }, // Fallback to symbol if name fetch fails
+                            { it },
+                        )
+
+                    parseQuote(quote, companyName).bind()
+                }
+                HttpStatusCode.InternalServerError,
+                HttpStatusCode.BadGateway,
+                HttpStatusCode.ServiceUnavailable,
+                HttpStatusCode.GatewayTimeout,
+                -> {
+                    raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
+                }
+                else -> {
+                    raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
+                }
             }
-            HttpStatusCode.InternalServerError,
-            HttpStatusCode.BadGateway,
-            HttpStatusCode.ServiceUnavailable,
-            HttpStatusCode.GatewayTimeout -> {
-                raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
+        }
+
+    private suspend fun fetchCompanyName(symbol: String): Either<ProviderError, String> =
+        either {
+            val response =
+                try {
+                    httpClient.get(baseUrl) {
+                        parameter("function", "OVERVIEW")
+                        parameter("symbol", symbol)
+                        parameter("apikey", apiKey)
+                    }
+                } catch (e: Exception) {
+                    return@either symbol // Return symbol as fallback on any error
+                }
+
+            if (response.status == HttpStatusCode.OK) {
+                val responseBody = response.bodyAsText()
+
+                // Check for rate limit in overview request
+                if (responseBody.contains("Thank you for using Alpha Vantage")) {
+                    return@either symbol // Return symbol as fallback on rate limit
+                }
+
+                try {
+                    val overview = Json.decodeFromString<CompanyOverviewResponse>(responseBody)
+                    overview.name
+                } catch (e: Exception) {
+                    symbol // Return symbol as fallback on parse error
+                }
+            } else {
+                symbol // Return symbol as fallback on error
             }
-            else -> {
-                raise(ProviderError.ServiceUnavailable("Alpha Vantage"))
+        }
+
+    private fun parseQuote(
+        response: GlobalQuoteResponse,
+        companyName: String,
+    ): Either<ProviderError, FinancialQuote> =
+        either {
+            val quote = response.globalQuote
+
+            val currentPrice =
+                try {
+                    BigDecimal(quote.price)
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
+                }
+
+            val previousClose =
+                try {
+                    BigDecimal(quote.previousClose)
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
+                }
+
+            val change =
+                try {
+                    BigDecimal(quote.change)
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
+                }
+
+            val changePercent =
+                try {
+                    quote.changePercent.replace("%", "").toBigDecimal()
+                } catch (e: Exception) {
+                    raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
+                }
+
+            // Validate prices before creating the quote
+            if (currentPrice <= BigDecimal.ZERO || previousClose <= BigDecimal.ZERO) {
+                raise(ProviderError.InvalidResponse("Invalid price data for ${quote.symbol}: prices must be positive"))
             }
+
+            FinancialQuote(
+                symbol = quote.symbol,
+                name = companyName,
+                currentPrice = currentPrice,
+                previousClose = previousClose,
+                change = change,
+                changePercent = changePercent,
+                timestamp = LocalDateTime.now(),
+            )
         }
-    }
-    
-    private suspend fun fetchCompanyName(symbol: String): Either<ProviderError, String> = either {
-        val response = try {
-            httpClient.get(baseUrl) {
-                parameter("function", "OVERVIEW")
-                parameter("symbol", symbol)
-                parameter("apikey", apiKey)
-            }
-        } catch (e: Exception) {
-            return@either symbol // Return symbol as fallback on any error
-        }
-        
-        if (response.status == HttpStatusCode.OK) {
-            val responseBody = response.bodyAsText()
-            
-            // Check for rate limit in overview request
-            if (responseBody.contains("Thank you for using Alpha Vantage")) {
-                return@either symbol // Return symbol as fallback on rate limit
-            }
-            
-            try {
-                val overview = Json.decodeFromString<CompanyOverviewResponse>(responseBody)
-                overview.name
-            } catch (e: Exception) {
-                symbol // Return symbol as fallback on parse error
-            }
-        } else {
-            symbol // Return symbol as fallback on error
-        }
-    }
-    
-    private fun parseQuote(response: GlobalQuoteResponse, companyName: String): Either<ProviderError, FinancialQuote> = either {
-        val quote = response.globalQuote
-        
-        val currentPrice = try {
-            BigDecimal(quote.price)
-        } catch (e: Exception) {
-            raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
-        }
-        
-        val previousClose = try {
-            BigDecimal(quote.previousClose)
-        } catch (e: Exception) {
-            raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
-        }
-        
-        val change = try {
-            BigDecimal(quote.change)
-        } catch (e: Exception) {
-            raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
-        }
-        
-        val changePercent = try {
-            quote.changePercent.replace("%", "").toBigDecimal()
-        } catch (e: Exception) {
-            raise(ProviderError.InvalidResponse("Invalid quote data for ${quote.symbol}: ${e.message}"))
-        }
-        
-        // Validate prices before creating the quote
-        if (currentPrice <= BigDecimal.ZERO || previousClose <= BigDecimal.ZERO) {
-            raise(ProviderError.InvalidResponse("Invalid price data for ${quote.symbol}: prices must be positive"))
-        }
-        
-        FinancialQuote(
-            symbol = quote.symbol,
-            name = companyName,
-            currentPrice = currentPrice,
-            previousClose = previousClose,
-            change = change,
-            changePercent = changePercent,
-            timestamp = LocalDateTime.now()
-        )
-    }
-    
+
     @Serializable
     private data class GlobalQuoteResponse(
         @SerialName("Global Quote")
-        val globalQuote: GlobalQuote
+        val globalQuote: GlobalQuote,
     )
-    
+
     @Serializable
     private data class GlobalQuote(
         @SerialName("01. symbol")
@@ -210,9 +226,9 @@ class AlphaVantageAdapter(
         @SerialName("09. change")
         val change: String,
         @SerialName("10. change percent")
-        val changePercent: String
+        val changePercent: String,
     )
-    
+
     @Serializable
     private data class CompanyOverviewResponse(
         @SerialName("Symbol")
@@ -222,6 +238,6 @@ class AlphaVantageAdapter(
         @SerialName("Description")
         val description: String? = null,
         @SerialName("Exchange")
-        val exchange: String? = null
+        val exchange: String? = null,
     )
 }

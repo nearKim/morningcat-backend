@@ -15,13 +15,13 @@ data class DailyBriefingDto(
     val calendarEvents: List<CalendarEventDto>,
     val selfImprovementTips: List<SelfImprovementTipDto>,
     val entertainmentRecommendations: List<EntertainmentRecommendationDto>,
-    val generatedAt: String
+    val generatedAt: String,
 )
 
 @Serializable
 data class BriefingLocationDto(
     val city: String,
-    val countryCode: String
+    val countryCode: String,
 )
 
 @Serializable
@@ -31,7 +31,7 @@ data class NewsArticleDto(
     val source: String,
     val publishedAt: String,
     val url: String?,
-    val category: String
+    val category: String,
 )
 
 @Serializable
@@ -41,14 +41,14 @@ data class WeatherInfoDto(
     val condition: String,
     val humidity: Int,
     val uvIndex: Int,
-    val precipitation: Int
+    val precipitation: Int,
 )
 
 @Serializable
 data class TemperatureDto(
     val min: Double,
     val max: Double,
-    val current: Double
+    val current: Double,
 )
 
 @Serializable
@@ -59,7 +59,7 @@ data class FinancialQuoteDto(
     val previousClose: String,
     val change: String,
     val changePercent: String,
-    val timestamp: String
+    val timestamp: String,
 )
 
 @Serializable
@@ -69,7 +69,7 @@ data class CalendarEventDto(
     val startTime: String,
     val endTime: String,
     val location: String?,
-    val isAllDay: Boolean
+    val isAllDay: Boolean,
 )
 
 @Serializable
@@ -77,7 +77,7 @@ data class SelfImprovementTipDto(
     val category: String,
     val title: String,
     val content: String,
-    val source: String?
+    val source: String?,
 )
 
 @Serializable
@@ -87,5 +87,5 @@ data class EntertainmentRecommendationDto(
     val description: String,
     val duration: Int?,
     val source: String,
-    val url: String?
+    val url: String?,
 )

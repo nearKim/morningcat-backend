@@ -13,162 +13,172 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
-class NewsApiAdapterTest : StringSpec({
-    
-    val json = Json { 
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-    
-    fun createMockClient(handler: MockRequestHandler): HttpClient {
-        return HttpClient(MockEngine) {
-            install(ContentNegotiation) {
-                json(json)
+class NewsApiAdapterTest :
+    StringSpec({
+
+        val json =
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
             }
-            engine {
-                addHandler(handler)
+
+        fun createMockClient(handler: MockRequestHandler): HttpClient =
+            HttpClient(MockEngine) {
+                install(ContentNegotiation) {
+                    json(json)
+                }
+                engine {
+                    addHandler(handler)
+                }
             }
+
+        "should successfully fetch and parse news articles" {
+            // Given
+            val apiKey = "test-api-key"
+            val countryCode = "us"
+
+            val client =
+                createMockClient { request ->
+                    when {
+                        request.url.toString().contains("top-headlines") -> {
+                            respond(
+                                content =
+                                    """
+                                    {
+                                        "status": "ok",
+                                        "totalResults": 1,
+                                        "articles": [
+                                            {
+                                                "title": "Test Article",
+                                                "description": "Test description",
+                                                "url": "https://example.com/article"
+                                            }
+                                        ]
+                                    }
+                                    """.trimIndent(),
+                                status = HttpStatusCode.OK,
+                                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                            )
+                        }
+                        else -> error("Unhandled ${request.url}")
+                    }
+                }
+
+            val adapter = NewsApiAdapter(client, apiKey)
+
+            // When
+            val result = adapter.fetchNews(countryCode)
+
+            // Then
+            result shouldBe
+                listOf(
+                    NewsArticle(
+                        headline = "Test Article",
+                        summary = "Test description",
+                        url = "https://example.com/article",
+                    ),
+                ).right()
         }
-    }
-    
-    "should successfully fetch and parse news articles" {
-        // Given
-        val apiKey = "test-api-key"
-        val countryCode = "us"
-        
-        val client = createMockClient { request ->
-            when {
-                request.url.toString().contains("top-headlines") -> {
+
+        "should handle network error" {
+            // Given
+            val apiKey = "test-api-key"
+            val countryCode = "us"
+
+            val client =
+                createMockClient { _ ->
+                    throw Exception("Network error")
+                }
+
+            val adapter = NewsApiAdapter(client, apiKey)
+
+            // When
+            val result = adapter.fetchNews(countryCode)
+
+            // Then
+            result shouldBe ProviderError.NetworkError("Network error").left()
+        }
+
+        "should filter out articles with null fields" {
+            // Given
+            val apiKey = "test-api-key"
+            val countryCode = "gb"
+
+            val client =
+                createMockClient { request ->
                     respond(
-                        content = """
+                        content =
+                            """
                             {
                                 "status": "ok",
-                                "totalResults": 1,
+                                "totalResults": 3,
                                 "articles": [
                                     {
-                                        "title": "Test Article",
-                                        "description": "Test description",
-                                        "url": "https://example.com/article"
+                                        "title": "Valid Article",
+                                        "description": "Valid description",
+                                        "url": "https://example.com/valid"
+                                    },
+                                    {
+                                        "title": null,
+                                        "description": "Missing title",
+                                        "url": "https://example.com/no-title"
+                                    },
+                                    {
+                                        "title": "Missing URL",
+                                        "description": "Valid description",
+                                        "url": null
                                     }
                                 ]
                             }
-                        """.trimIndent(),
+                            """.trimIndent(),
                         status = HttpStatusCode.OK,
-                        headers = headersOf(HttpHeaders.ContentType, "application/json")
+                        headers = headersOf(HttpHeaders.ContentType, "application/json"),
                     )
                 }
-                else -> error("Unhandled ${request.url}")
-            }
+
+            val adapter = NewsApiAdapter(client, apiKey)
+
+            // When
+            val result = adapter.fetchNews(countryCode)
+
+            // Then
+            result shouldBe
+                listOf(
+                    NewsArticle(
+                        headline = "Valid Article",
+                        summary = "Valid description",
+                        url = "https://example.com/valid",
+                    ),
+                ).right()
         }
-        
-        val adapter = NewsApiAdapter(client, apiKey)
-        
-        // When
-        val result = adapter.fetchNews(countryCode)
-        
-        // Then
-        result shouldBe listOf(
-            NewsArticle(
-                headline = "Test Article",
-                summary = "Test description",
-                url = "https://example.com/article"
-            )
-        ).right()
-    }
-    
-    "should handle network error" {
-        // Given
-        val apiKey = "test-api-key"
-        val countryCode = "us"
-        
-        val client = createMockClient { _ ->
-            throw Exception("Network error")
-        }
-        
-        val adapter = NewsApiAdapter(client, apiKey)
-        
-        // When
-        val result = adapter.fetchNews(countryCode)
-        
-        // Then
-        result shouldBe ProviderError.NetworkError("Network error").left()
-    }
-    
-    "should filter out articles with null fields" {
-        // Given
-        val apiKey = "test-api-key"
-        val countryCode = "gb"
-        
-        val client = createMockClient { request ->
-            respond(
-                content = """
-                    {
-                        "status": "ok",
-                        "totalResults": 3,
-                        "articles": [
+
+        "should handle error status in response" {
+            // Given
+            val apiKey = "test-api-key"
+            val countryCode = "us"
+
+            val client =
+                createMockClient { request ->
+                    respond(
+                        content =
+                            """
                             {
-                                "title": "Valid Article",
-                                "description": "Valid description",
-                                "url": "https://example.com/valid"
-                            },
-                            {
-                                "title": null,
-                                "description": "Missing title",
-                                "url": "https://example.com/no-title"
-                            },
-                            {
-                                "title": "Missing URL",
-                                "description": "Valid description",
-                                "url": null
+                                "status": "error",
+                                "code": "parametersMissing",
+                                "message": "Required parameters are missing"
                             }
-                        ]
-                    }
-                """.trimIndent(),
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json")
-            )
+                            """.trimIndent(),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                }
+
+            val adapter = NewsApiAdapter(client, apiKey)
+
+            // When
+            val result = adapter.fetchNews(countryCode)
+
+            // Then
+            result shouldBe ProviderError.InvalidResponse("API returned status: error").left()
         }
-        
-        val adapter = NewsApiAdapter(client, apiKey)
-        
-        // When
-        val result = adapter.fetchNews(countryCode)
-        
-        // Then
-        result shouldBe listOf(
-            NewsArticle(
-                headline = "Valid Article",
-                summary = "Valid description",
-                url = "https://example.com/valid"
-            )
-        ).right()
-    }
-    
-    "should handle error status in response" {
-        // Given
-        val apiKey = "test-api-key"
-        val countryCode = "us"
-        
-        val client = createMockClient { request ->
-            respond(
-                content = """
-                    {
-                        "status": "error",
-                        "code": "parametersMissing",
-                        "message": "Required parameters are missing"
-                    }
-                """.trimIndent(),
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json")
-            )
-        }
-        
-        val adapter = NewsApiAdapter(client, apiKey)
-        
-        // When
-        val result = adapter.fetchNews(countryCode)
-        
-        // Then
-        result shouldBe ProviderError.InvalidResponse("API returned status: error").left()
-    }
-})
+    })

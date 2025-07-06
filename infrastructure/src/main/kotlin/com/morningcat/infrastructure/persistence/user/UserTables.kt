@@ -9,7 +9,7 @@ object Users : Table("users") {
     val name = varchar("name", 255)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
-    
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -25,6 +25,6 @@ object Subscriptions : Table("subscriptions") {
     val weekendDelivery = bool("weekend_delivery").default(true)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
-    
+
     override val primaryKey = PrimaryKey(userId)
 }

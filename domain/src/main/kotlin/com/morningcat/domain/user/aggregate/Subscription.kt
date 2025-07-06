@@ -49,7 +49,7 @@ class Subscription private constructor(
         weekendDelivery: Boolean,
         newDeliveryChannels: Set<DeliveryChannelType>,
         newContentPreferences: Map<ContentCategory, Boolean>,
-        newFinancialInstruments: Set<String>
+        newFinancialInstruments: Set<String>,
     ) {
         // Update enabled status
         this.isEnabled = isEnabled
@@ -77,10 +77,11 @@ class Subscription private constructor(
         this.contentPreferences = newContentPreferences.toMap()
 
         // Update financial instruments
-        this.financialPreferences = newFinancialInstruments
-            .map { it.trim().uppercase() }
-            .filter { it.isNotBlank() }
-            .toSet()
+        this.financialPreferences =
+            newFinancialInstruments
+                .map { it.trim().uppercase() }
+                .filter { it.isNotBlank() }
+                .toSet()
     }
 
     fun enable() {

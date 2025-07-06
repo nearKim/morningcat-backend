@@ -5,5 +5,5 @@ import com.morningcat.application.user.dto.UserSettingsDto
 
 data class UpdateSubscriptionSettingsCommand(
     val userId: String,
-    val settingsDto: UserSettingsDto
+    val settingsDto: UserSettingsDto,
 ) : Command

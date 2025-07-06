@@ -1,22 +1,23 @@
 package com.morningcat.domain.content.valueobject
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 
 class ContentCategoryTest :
     StringSpec({
 
         "should have all expected content categories" {
-            ContentCategory.values().toList() shouldContainExactly listOf(
-                ContentCategory.NEWS,
-                ContentCategory.WEATHER,
-                ContentCategory.FINANCE,
-                ContentCategory.CALENDAR,
-                ContentCategory.SELF_IMPROVEMENT,
-                ContentCategory.ENTERTAINMENT
-            )
+            ContentCategory.values().toList() shouldContainExactly
+                listOf(
+                    ContentCategory.NEWS,
+                    ContentCategory.WEATHER,
+                    ContentCategory.FINANCE,
+                    ContentCategory.CALENDAR,
+                    ContentCategory.SELF_IMPROVEMENT,
+                    ContentCategory.ENTERTAINMENT,
+                )
         }
 
         "should return correct display names" {
@@ -55,11 +56,12 @@ class ContentCategoryTest :
         }
 
         "should be usable in collections" {
-            val categories = setOf(
-                ContentCategory.NEWS,
-                ContentCategory.WEATHER,
-                ContentCategory.NEWS, // Duplicate
-            )
+            val categories =
+                setOf(
+                    ContentCategory.NEWS,
+                    ContentCategory.WEATHER,
+                    ContentCategory.NEWS, // Duplicate
+                )
 
             categories shouldHaveSize 2 // Set removes duplicates
             categories.contains(ContentCategory.NEWS) shouldBe true

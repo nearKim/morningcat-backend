@@ -112,14 +112,15 @@ class SubscriptionTest :
             val newTime = LocalTime.of(9, 0)
             val newLocation = Location("Tokyo", "JP")
             val newChannels = setOf(DeliveryChannelType.PushNotification)
-            val newContentPrefs = mapOf(
-                ContentCategory.NEWS to false,
-                ContentCategory.WEATHER to false,
-                ContentCategory.FINANCE to true,
-                ContentCategory.CALENDAR to true,
-                ContentCategory.SELF_IMPROVEMENT to false,
-                ContentCategory.ENTERTAINMENT to false,
-            )
+            val newContentPrefs =
+                mapOf(
+                    ContentCategory.NEWS to false,
+                    ContentCategory.WEATHER to false,
+                    ContentCategory.FINANCE to true,
+                    ContentCategory.CALENDAR to true,
+                    ContentCategory.SELF_IMPROVEMENT to false,
+                    ContentCategory.ENTERTAINMENT to false,
+                )
             val newTickers = setOf("MSFT", "AMZN")
 
             subscription.updateSettings(

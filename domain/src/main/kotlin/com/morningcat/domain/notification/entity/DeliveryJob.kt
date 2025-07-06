@@ -24,24 +24,28 @@ data class DeliveryJob(
 
     fun canRetry(): Boolean = attempts < MAX_RETRY_ATTEMPTS && status == DeliveryStatus.FAILED
 
-    fun incrementAttempts(): DeliveryJob = copy(
-        attempts = attempts + 1,
-        lastAttemptAt = LocalDateTime.now(),
-    )
+    fun incrementAttempts(): DeliveryJob =
+        copy(
+            attempts = attempts + 1,
+            lastAttemptAt = LocalDateTime.now(),
+        )
 
-    fun markCompleted(): DeliveryJob = copy(
-        status = DeliveryStatus.COMPLETED,
-        completedAt = LocalDateTime.now(),
-    )
+    fun markCompleted(): DeliveryJob =
+        copy(
+            status = DeliveryStatus.COMPLETED,
+            completedAt = LocalDateTime.now(),
+        )
 
-    fun markFailed(error: String): DeliveryJob = copy(
-        status = DeliveryStatus.FAILED,
-        errorMessage = error,
-        lastAttemptAt = LocalDateTime.now(),
-    )
+    fun markFailed(error: String): DeliveryJob =
+        copy(
+            status = DeliveryStatus.FAILED,
+            errorMessage = error,
+            lastAttemptAt = LocalDateTime.now(),
+        )
 
-    fun markInProgress(): DeliveryJob = copy(
-        status = DeliveryStatus.IN_PROGRESS,
-        lastAttemptAt = LocalDateTime.now(),
-    )
+    fun markInProgress(): DeliveryJob =
+        copy(
+            status = DeliveryStatus.IN_PROGRESS,
+            lastAttemptAt = LocalDateTime.now(),
+        )
 }

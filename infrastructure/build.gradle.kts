@@ -33,6 +33,12 @@ dependencies {
     // Caching
     implementation(libs.lettuce.core)
 
+    // Email
+    implementation(libs.simple.java.mail)
+
+    // Template Engine
+    implementation(libs.freemarker)
+
     testImplementation(libs.bundles.kotest)
     testImplementation(libs.mockk)
     testImplementation(libs.ktor.client.mock)

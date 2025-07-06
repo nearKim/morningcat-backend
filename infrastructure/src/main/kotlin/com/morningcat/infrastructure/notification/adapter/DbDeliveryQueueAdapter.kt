@@ -14,9 +14,7 @@ import com.morningcat.domain.user.aggregate.User
 import com.morningcat.domain.user.valueobject.Location
 import com.morningcat.infrastructure.notification.table.DeliveryQueueTable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -35,137 +33,159 @@ import java.util.UUID
 
 class DbDeliveryQueueAdapter(
     private val database: Database,
-    private val json: Json = Json { 
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    },
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        },
 ) : DeliveryQueuePort {
-    
     override suspend fun enqueue(
         briefing: DailyBriefing,
         user: User,
-    ): Either<DeliveryError, Unit> = newSuspendedTransaction(Dispatchers.IO, database) {
-        try {
-            DeliveryQueueTable.insert {
-                it[id] = UUID.randomUUID()
-                it[briefingId] = briefing.id
-                it[userId] = user.id.value
-                it[userEmail] = user.getEmail().value
-                it[briefingData] = serializeBriefing(briefing)
-                it[userData] = serializeUser(user)
-                it[status] = DeliveryStatus.PENDING.name
-                it[attempts] = 0
-                it[createdAt] = LocalDateTime.now()
-                it[scheduledFor] = LocalDateTime.now()
-                it[lastAttemptAt] = null
-                it[completedAt] = null
-                it[errorMessage] = null
+    ): Either<DeliveryError, Unit> =
+        newSuspendedTransaction(Dispatchers.IO, database) {
+            try {
+                DeliveryQueueTable.insert {
+                    it[id] = UUID.randomUUID()
+                    it[briefingId] = briefing.id
+                    it[userId] = user.id.value
+                    it[userEmail] = user.getEmail().value
+                    it[briefingData] = serializeBriefing(briefing)
+                    it[userData] = serializeUser(user)
+                    it[status] = DeliveryStatus.PENDING.name
+                    it[attempts] = 0
+                    it[createdAt] = LocalDateTime.now()
+                    it[scheduledFor] = LocalDateTime.now()
+                    it[lastAttemptAt] = null
+                    it[completedAt] = null
+                    it[errorMessage] = null
+                }
+                Unit.right()
+            } catch (e: Exception) {
+                DeliveryError.QueueError("Failed to enqueue delivery job: ${e.message}").left()
             }
-            Unit.right()
-        } catch (e: Exception) {
-            DeliveryError.QueueError("Failed to enqueue delivery job: ${e.message}").left()
         }
-    }
 
-    override suspend fun dequeue(): DeliveryJob? = newSuspendedTransaction(Dispatchers.IO, database) {
-        val eligibleJob = DeliveryQueueTable
-            .selectAll()
-            .where { 
-                (DeliveryQueueTable.status eq DeliveryStatus.PENDING.name) and
-                (DeliveryQueueTable.scheduledFor lessEq LocalDateTime.now())
+    override suspend fun dequeue(): DeliveryJob? =
+        newSuspendedTransaction(Dispatchers.IO, database) {
+            val eligibleJob =
+                DeliveryQueueTable
+                    .selectAll()
+                    .where {
+                        (DeliveryQueueTable.status eq DeliveryStatus.PENDING.name) and
+                            (DeliveryQueueTable.scheduledFor lessEq LocalDateTime.now())
+                    }.orderBy(DeliveryQueueTable.createdAt, SortOrder.ASC)
+                    .limit(1)
+                    .forUpdate()
+                    .firstOrNull()
+
+            eligibleJob?.let { row ->
+                val jobId = row[DeliveryQueueTable.id].value
+
+                // Mark as in progress
+                DeliveryQueueTable.update({ DeliveryQueueTable.id eq jobId }) {
+                    it[status] = DeliveryStatus.IN_PROGRESS.name
+                    it[lastAttemptAt] = LocalDateTime.now()
+                    it[attempts] = row[DeliveryQueueTable.attempts] + 1
+                }
+
+                // Return the updated job
+                mapRowToDeliveryJob(row).copy(
+                    status = DeliveryStatus.IN_PROGRESS,
+                    attempts = row[DeliveryQueueTable.attempts] + 1,
+                    lastAttemptAt = LocalDateTime.now(),
+                )
             }
-            .orderBy(DeliveryQueueTable.createdAt, SortOrder.ASC)
-            .limit(1)
-            .forUpdate()
-            .firstOrNull()
-
-        eligibleJob?.let { row ->
-            val jobId = row[DeliveryQueueTable.id].value
-            
-            // Mark as in progress
-            DeliveryQueueTable.update({ DeliveryQueueTable.id eq jobId }) {
-                it[status] = DeliveryStatus.IN_PROGRESS.name
-                it[lastAttemptAt] = LocalDateTime.now()
-                it[attempts] = row[DeliveryQueueTable.attempts] + 1
-            }
-
-            // Return the updated job
-            mapRowToDeliveryJob(row).copy(
-                status = DeliveryStatus.IN_PROGRESS,
-                attempts = row[DeliveryQueueTable.attempts] + 1,
-                lastAttemptAt = LocalDateTime.now(),
-            )
         }
-    }
 
-    private fun serializeBriefing(briefing: DailyBriefing): String {
-        return buildJsonObject {
+    private fun serializeBriefing(briefing: DailyBriefing): String =
+        buildJsonObject {
             put("id", briefing.id.toString())
             put("userId", briefing.userId.value.toString())
             put("date", briefing.date.toString())
-            put("dayType", when (briefing.dayType) {
-                is DayType.Weekday -> "WEEKDAY"
-                is DayType.WeekendOrHoliday -> "WEEKEND_OR_HOLIDAY"
-            })
-            put("location", buildJsonObject {
-                put("city", briefing.location.city)
-                put("countryCode", briefing.location.countryCode)
-            })
+            put(
+                "dayType",
+                when (briefing.dayType) {
+                    is DayType.Weekday -> "WEEKDAY"
+                    is DayType.WeekendOrHoliday -> "WEEKEND_OR_HOLIDAY"
+                },
+            )
+            put(
+                "location",
+                buildJsonObject {
+                    put("city", briefing.location.city)
+                    put("countryCode", briefing.location.countryCode)
+                },
+            )
             put("generatedAt", briefing.generatedAt.toString())
             put("hasWeather", briefing.weather != null)
         }.toString()
-    }
 
-    private fun serializeUser(user: User): String {
-        return buildJsonObject {
+    private fun serializeUser(user: User): String =
+        buildJsonObject {
             put("id", user.id.value.toString())
             put("email", user.getEmail().value)
             put("name", user.name)
         }.toString()
-    }
 
-    private fun deserializeBriefing(data: String, userId: UUID): DailyBriefing {
+    private fun deserializeBriefing(
+        data: String,
+        userId: UUID,
+    ): DailyBriefing {
         val jsonObject = json.parseToJsonElement(data).jsonObject
         val locationObject = jsonObject["location"]?.jsonObject ?: throw IllegalStateException("Missing location data")
-        
+
         return DailyBriefing(
             id = UUID.fromString(jsonObject["id"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing id")),
-            userId = com.morningcat.domain.user.valueobject.UserId(userId),
+            userId =
+                com.morningcat.domain.user.valueobject
+                    .UserId(userId),
             date = LocalDate.parse(jsonObject["date"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing date")),
-            dayType = when (jsonObject["dayType"]?.jsonPrimitive?.content) {
-                "WEEKDAY" -> DayType.Weekday
-                "WEEKEND_OR_HOLIDAY" -> DayType.WeekendOrHoliday
-                else -> DayType.Weekday
-            },
-            location = Location.create(
-                city = locationObject["city"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing city"),
-                countryCode = locationObject["countryCode"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing countryCode"),
-            ),
-            generatedAt = LocalDateTime.parse(jsonObject["generatedAt"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing generatedAt")),
+            dayType =
+                when (jsonObject["dayType"]?.jsonPrimitive?.content) {
+                    "WEEKDAY" -> DayType.Weekday
+                    "WEEKEND_OR_HOLIDAY" -> DayType.WeekendOrHoliday
+                    else -> DayType.Weekday
+                },
+            location =
+                Location.create(
+                    city = locationObject["city"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing city"),
+                    countryCode =
+                        locationObject["countryCode"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing countryCode"),
+                ),
+            generatedAt =
+                LocalDateTime.parse(
+                    jsonObject["generatedAt"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing generatedAt"),
+                ),
             // Add dummy weather to satisfy DailyBriefing validation
-            weather = if (jsonObject["hasWeather"]?.jsonPrimitive?.content?.toBoolean() == true) {
-                WeatherInfo(
-                    date = LocalDate.parse(jsonObject["date"]?.jsonPrimitive?.content ?: ""),
-                    temperature = WeatherInfo.Temperature(min = 10.0, max = 20.0, current = 15.0),
-                    condition = "Unknown",
-                    humidity = 50,
-                    uvIndex = 5,
-                    precipitation = 0,
-                )
-            } else null,
+            weather =
+                if (jsonObject["hasWeather"]?.jsonPrimitive?.content?.toBoolean() == true) {
+                    WeatherInfo(
+                        date = LocalDate.parse(jsonObject["date"]?.jsonPrimitive?.content ?: ""),
+                        temperature = WeatherInfo.Temperature(min = 10.0, max = 20.0, current = 15.0),
+                        condition = "Unknown",
+                        humidity = 50,
+                        uvIndex = 5,
+                        precipitation = 0,
+                    )
+                } else {
+                    null
+                },
         )
     }
 
     private fun deserializeUser(data: String): User {
         val jsonObject = json.parseToJsonElement(data).jsonObject
-        val emailResult = com.morningcat.domain.user.valueobject.EmailAddress.create(
-            jsonObject["email"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing email")
-        )
+        val emailResult =
+            com.morningcat.domain.user.valueobject.EmailAddress.create(
+                jsonObject["email"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing email"),
+            )
         val email = emailResult.getOrNull() ?: throw IllegalStateException("Invalid email in stored user data")
         return User.register(
-            id = com.morningcat.domain.user.valueobject.UserId(
-                UUID.fromString(jsonObject["id"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing id"))
-            ),
+            id =
+                com.morningcat.domain.user.valueobject.UserId(
+                    UUID.fromString(jsonObject["id"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing id")),
+                ),
             email = email,
             name = jsonObject["name"]?.jsonPrimitive?.content ?: throw IllegalStateException("Missing name"),
         )

@@ -34,4 +34,6 @@ sealed class DeliveryError(
     data class QueueError(
         val details: String,
     ) : DeliveryError("Queue operation error: $details")
+
+    data object DeviceTokenNotFound : DeliveryError("Device token not found for push notification")
 }

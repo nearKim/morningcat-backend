@@ -89,6 +89,9 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 # Email
 sendgrid-java = { module = "com.sendgrid:sendgrid-java", version = "4.10.2" }
 
+# Push Notifications
+firebase-admin = { module = "com.google.firebase:firebase-admin", version = "9.2.0" }
+
 # Template Engine
 freemarker = { module = "org.freemarker:freemarker", version = "2.3.33" }
 

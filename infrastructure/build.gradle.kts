@@ -34,7 +34,10 @@ dependencies {
     implementation(libs.lettuce.core)
 
     // Email
-    implementation(libs.simple.java.mail)
+    implementation(libs.sendgrid.java)
+    
+    // Push Notifications
+    implementation(libs.firebase.admin)
 
     // Template Engine
     implementation(libs.freemarker)

@@ -13,13 +13,10 @@ import com.morningcat.domain.notification.valueobject.DeliveryChannelType
 import com.morningcat.domain.user.aggregate.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class FcmDeliveryAdapter(
     private val firebaseMessaging: FirebaseMessaging,
 ) : DeliveryPort {
-    
     companion object {
         private const val NOTIFICATION_TITLE = "Your MorningCat Daily Briefing"
         private const val WEATHER_EMOJI = "🌤"
@@ -31,13 +28,14 @@ class FcmDeliveryAdapter(
         briefing: DailyBriefing,
         user: User,
         channel: DeliveryChannelType,
-    ): Either<DeliveryError, Unit> = withContext(Dispatchers.IO) {
-        when (channel) {
-            is DeliveryChannelType.PushNotification -> sendPushNotification(briefing, user)
-            is DeliveryChannelType.Email -> 
-                DeliveryError.ChannelNotConfigured(channel.displayName()).left()
+    ): Either<DeliveryError, Unit> =
+        withContext(Dispatchers.IO) {
+            when (channel) {
+                is DeliveryChannelType.PushNotification -> sendPushNotification(briefing, user)
+                is DeliveryChannelType.Email ->
+                    DeliveryError.ChannelNotConfigured(channel.displayName()).left()
+            }
         }
-    }
 
     private suspend fun sendPushNotification(
         briefing: DailyBriefing,
@@ -47,36 +45,44 @@ class FcmDeliveryAdapter(
         if (activeTokens.isEmpty()) {
             return DeliveryError.DeviceTokenNotFound.left()
         }
-        
+
         // Send to all active devices
-        val results = activeTokens.map { fcmToken ->
-            try {
-                val message = buildMessage(briefing, fcmToken.token)
-                firebaseMessaging.send(message)
-                user.updateTokenUsage(fcmToken.token)
-                true
-            } catch (e: Exception) {
-                // Log the error but continue with other devices
-                false
+        val results =
+            activeTokens.map { fcmToken ->
+                try {
+                    val message = buildMessage(briefing, fcmToken.token)
+                    firebaseMessaging.send(message)
+                    user.updateTokenUsage(fcmToken.token)
+                    true
+                } catch (e: Exception) {
+                    // Log the error but continue with other devices
+                    false
+                }
             }
-        }
-        
+
         return if (results.any { it }) {
             Unit.right()
         } else {
-            DeliveryError.DeliveryFailed(
-                "Failed to send push notification to any device"
-            ).left()
+            DeliveryError
+                .DeliveryFailed(
+                    "Failed to send push notification to any device",
+                ).left()
         }
     }
 
-    private fun buildMessage(briefing: DailyBriefing, token: String): Message {
-        val notification = Notification.builder()
-            .setTitle(NOTIFICATION_TITLE)
-            .setBody(buildNotificationBody(briefing))
-            .build()
+    private fun buildMessage(
+        briefing: DailyBriefing,
+        token: String,
+    ): Message {
+        val notification =
+            Notification
+                .builder()
+                .setTitle(NOTIFICATION_TITLE)
+                .setBody(buildNotificationBody(briefing))
+                .build()
 
-        return Message.builder()
+        return Message
+            .builder()
             .setToken(token)
             .setNotification(notification)
             .putAllData(buildDataPayload(briefing))
@@ -84,14 +90,18 @@ class FcmDeliveryAdapter(
     }
 
     private fun buildNotificationBody(briefing: DailyBriefing): String {
-        val weatherText = briefing.weather?.let { weather ->
-            "$WEATHER_EMOJI ${weather.condition}, ${weather.temperature.current}$DEGREE_SYMBOL"
-        } ?: ""
-        
-        val newsText = if (briefing.news.isNotEmpty()) {
-            "$NEWS_EMOJI ${briefing.news.size} news article${if (briefing.news.size != 1) "s" else ""}"
-        } else ""
-        
+        val weatherText =
+            briefing.weather?.let { weather ->
+                "$WEATHER_EMOJI ${weather.condition}, ${weather.temperature.current}$DEGREE_SYMBOL"
+            } ?: ""
+
+        val newsText =
+            if (briefing.news.isNotEmpty()) {
+                "$NEWS_EMOJI ${briefing.news.size} news article${if (briefing.news.size != 1) "s" else ""}"
+            } else {
+                ""
+            }
+
         return when {
             weatherText.isNotEmpty() && newsText.isNotEmpty() -> "$weatherText | $newsText"
             weatherText.isNotEmpty() -> weatherText
@@ -101,17 +111,17 @@ class FcmDeliveryAdapter(
     }
 
     private fun buildDataPayload(briefing: DailyBriefing): Map<String, String> {
-        val data = mutableMapOf(
-            "briefingDate" to briefing.date.toString(),
-            "newsCount" to briefing.news.size.toString()
-        )
-        
+        val data =
+            mutableMapOf(
+                "briefingDate" to briefing.date.toString(),
+                "newsCount" to briefing.news.size.toString(),
+            )
+
         briefing.weather?.let { weather ->
             data["weatherCondition"] = weather.condition
             data["temperature"] = weather.temperature.current.toString()
         }
-        
+
         return data
     }
-
 }

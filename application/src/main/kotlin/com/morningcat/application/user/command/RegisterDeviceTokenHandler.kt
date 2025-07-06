@@ -11,20 +11,22 @@ class RegisterDeviceTokenHandler(
     private val userRepository: UserRepository,
 ) {
     suspend fun handle(command: RegisterDeviceTokenCommand): Either<UserError, Unit> {
-        val user = userRepository.findById(command.userId)
-            ?: return UserError.UserNotFound(command.userId.value.toString()).left()
-        
-        val fcmToken = FcmToken(
-            token = command.token,
-            deviceId = command.deviceId,
-            deviceName = command.deviceName,
-            platform = command.platform
-        )
-        
+        val user =
+            userRepository.findById(command.userId)
+                ?: return UserError.UserNotFound(command.userId.value.toString()).left()
+
+        val fcmToken =
+            FcmToken(
+                token = command.token,
+                deviceId = command.deviceId,
+                deviceName = command.deviceName,
+                platform = command.platform,
+            )
+
         user.registerDevice(fcmToken)
-        
+
         userRepository.save(user)
-        
+
         return Unit.right()
     }
 }

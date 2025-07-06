@@ -23,118 +23,123 @@ import io.mockk.verify
 import java.time.LocalDate
 import java.util.UUID
 
-class FcmDeliveryAdapterTest : StringSpec({
-    val mockFirebaseMessaging = mockk<FirebaseMessaging>()
-    val adapter = FcmDeliveryAdapter(mockFirebaseMessaging)
+class FcmDeliveryAdapterTest :
+    StringSpec({
+        val mockFirebaseMessaging = mockk<FirebaseMessaging>()
+        val adapter = FcmDeliveryAdapter(mockFirebaseMessaging)
 
-    val userId = UserId(UUID.randomUUID())
-    val email = EmailAddress.create("user@example.com").getOrNull()!!
-    val user = User.register(userId, email, "Test User")
+        val userId = UserId(UUID.randomUUID())
+        val email = EmailAddress.create("user@example.com").getOrNull()!!
+        val user = User.register(userId, email, "Test User")
 
-    val briefing = DailyBriefing(
-        userId = userId,
-        date = LocalDate.now(),
-        dayType = DayType.Weekday,
-        location = Location.create("Seoul", "KR"),
-        news = listOf(
-            NewsArticle(
-                headline = "Breaking News",
-                summary = "Important news summary",
-                url = "https://news.example.com"
+        val briefing =
+            DailyBriefing(
+                userId = userId,
+                date = LocalDate.now(),
+                dayType = DayType.Weekday,
+                location = Location.create("Seoul", "KR"),
+                news =
+                    listOf(
+                        NewsArticle(
+                            headline = "Breaking News",
+                            summary = "Important news summary",
+                            url = "https://news.example.com",
+                        ),
+                    ),
+                weather =
+                    WeatherInfo(
+                        date = LocalDate.now(),
+                        temperature =
+                            WeatherInfo.Temperature(
+                                min = 20.0,
+                                max = 30.0,
+                                current = 25.0,
+                            ),
+                        condition = "Sunny",
+                        humidity = 60,
+                        uvIndex = 6,
+                        precipitation = 0,
+                    ),
             )
-        ),
-        weather = WeatherInfo(
-            date = LocalDate.now(),
-            temperature = WeatherInfo.Temperature(
-                min = 20.0,
-                max = 30.0,
-                current = 25.0
-            ),
-            condition = "Sunny",
-            humidity = 60,
-            uvIndex = 6,
-            precipitation = 0
-        )
-    )
 
-    "should send push notification successfully via PUSH_NOTIFICATION channel" {
-        val messageId = "message-id-123"
-        
-        every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+        "should send push notification successfully via PUSH_NOTIFICATION channel" {
+            val messageId = "message-id-123"
 
-        val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
+            every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
 
-        result.shouldBeRight()
-        
-        verify { mockFirebaseMessaging.send(any()) }
-    }
+            val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
 
-    "should return ChannelNotConfigured error for EMAIL channel" {
-        val result = adapter.send(briefing, user, DeliveryChannelType.Email)
+            result.shouldBeRight()
 
-        result.shouldBeLeft()
-        (result.swap().getOrNull()) shouldBe DeliveryError.ChannelNotConfigured("Email")
-    }
-
-    "should return DeviceTokenNotFound error when user has no FCM token" {
-        // TODO: Update this test once FCM token is added to User domain
-        // For now, this test won't work as we're returning a fake token
-        // val userWithoutToken = User.register(userId, email, "Test User")
-        // 
-        // val result = adapter.send(briefing, userWithoutToken, DeliveryChannelType.PushNotification)
-        //
-        // result.shouldBeLeft()
-        // (result.swap().getOrNull()) shouldBe DeliveryError.DeviceTokenNotFound
-    }
-
-    "should return DeliveryFailed error when Firebase throws exception" {
-        every { mockFirebaseMessaging.send(any()) } throws Exception("Network error")
-
-        val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
-
-        result.shouldBeLeft()
-        val error = result.swap().getOrNull()
-        error shouldBe DeliveryError.DeliveryFailed("Network error")
-    }
-
-    "should build and send message with notification and data payload" {
-        clearMocks(mockFirebaseMessaging)
-        val messageId = "message-id-123"
-        
-        every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
-
-        val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
-
-        result.shouldBeRight()
-        
-        verify(exactly = 1) { 
-            mockFirebaseMessaging.send(any())
+            verify { mockFirebaseMessaging.send(any()) }
         }
-    }
 
-    "should handle briefing without weather data" {
-        val briefingWithoutWeather = briefing.copy(weather = null)
-        val messageId = "message-id-123"
-        
-        every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+        "should return ChannelNotConfigured error for EMAIL channel" {
+            val result = adapter.send(briefing, user, DeliveryChannelType.Email)
 
-        val result = adapter.send(briefingWithoutWeather, user, DeliveryChannelType.PushNotification)
+            result.shouldBeLeft()
+            (result.swap().getOrNull()) shouldBe DeliveryError.ChannelNotConfigured("Email")
+        }
 
-        result.shouldBeRight()
-        
-        verify { mockFirebaseMessaging.send(any()) }
-    }
+        "should return DeviceTokenNotFound error when user has no FCM token" {
+            // TODO: Update this test once FCM token is added to User domain
+            // For now, this test won't work as we're returning a fake token
+            // val userWithoutToken = User.register(userId, email, "Test User")
+            //
+            // val result = adapter.send(briefing, userWithoutToken, DeliveryChannelType.PushNotification)
+            //
+            // result.shouldBeLeft()
+            // (result.swap().getOrNull()) shouldBe DeliveryError.DeviceTokenNotFound
+        }
 
-    "should handle briefing without news" {
-        val briefingWithoutNews = briefing.copy(news = emptyList())
-        val messageId = "message-id-123"
-        
-        every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+        "should return DeliveryFailed error when Firebase throws exception" {
+            every { mockFirebaseMessaging.send(any()) } throws Exception("Network error")
 
-        val result = adapter.send(briefingWithoutNews, user, DeliveryChannelType.PushNotification)
+            val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
 
-        result.shouldBeRight()
-        
-        verify { mockFirebaseMessaging.send(any()) }
-    }
-})
+            result.shouldBeLeft()
+            val error = result.swap().getOrNull()
+            error shouldBe DeliveryError.DeliveryFailed("Network error")
+        }
+
+        "should build and send message with notification and data payload" {
+            clearMocks(mockFirebaseMessaging)
+            val messageId = "message-id-123"
+
+            every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+
+            val result = adapter.send(briefing, user, DeliveryChannelType.PushNotification)
+
+            result.shouldBeRight()
+
+            verify(exactly = 1) {
+                mockFirebaseMessaging.send(any())
+            }
+        }
+
+        "should handle briefing without weather data" {
+            val briefingWithoutWeather = briefing.copy(weather = null)
+            val messageId = "message-id-123"
+
+            every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+
+            val result = adapter.send(briefingWithoutWeather, user, DeliveryChannelType.PushNotification)
+
+            result.shouldBeRight()
+
+            verify { mockFirebaseMessaging.send(any()) }
+        }
+
+        "should handle briefing without news" {
+            val briefingWithoutNews = briefing.copy(news = emptyList())
+            val messageId = "message-id-123"
+
+            every { mockFirebaseMessaging.send(any<Message>()) } returns messageId
+
+            val result = adapter.send(briefingWithoutNews, user, DeliveryChannelType.PushNotification)
+
+            result.shouldBeRight()
+
+            verify { mockFirebaseMessaging.send(any()) }
+        }
+    })

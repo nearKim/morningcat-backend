@@ -35,7 +35,7 @@ dependencies {
 
     // Email
     implementation(libs.sendgrid.java)
-    
+
     // Push Notifications
     implementation(libs.firebase.admin)
 

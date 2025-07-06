@@ -30,40 +30,43 @@ data class RegisterDeviceTokenResponse(
 
 fun Route.deviceTokenRoutes() {
     val handler by inject<RegisterDeviceTokenHandler>()
-    
+
     route("/api/v1/users/{userId}/devices") {
         post("/register") {
-            val userId = call.parameters["userId"] 
-                ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing user ID")
-                
+            val userId =
+                call.parameters["userId"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing user ID")
+
             val request = call.receive<RegisterDeviceTokenRequest>()
-            
-            val platform = when (request.platform.lowercase()) {
-                "android" -> FcmToken.Platform.ANDROID
-                "ios" -> FcmToken.Platform.IOS
-                "web" -> FcmToken.Platform.WEB
-                else -> return@post call.respond(
-                    HttpStatusCode.BadRequest, 
-                    "Invalid platform. Must be 'android', 'ios', or 'web'"
+
+            val platform =
+                when (request.platform.lowercase()) {
+                    "android" -> FcmToken.Platform.ANDROID
+                    "ios" -> FcmToken.Platform.IOS
+                    "web" -> FcmToken.Platform.WEB
+                    else -> return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        "Invalid platform. Must be 'android', 'ios', or 'web'",
+                    )
+                }
+
+            val command =
+                RegisterDeviceTokenCommand(
+                    userId = UserId(UUID.fromString(userId)),
+                    token = request.token,
+                    deviceId = request.deviceId,
+                    deviceName = request.deviceName,
+                    platform = platform,
                 )
-            }
-            
-            val command = RegisterDeviceTokenCommand(
-                userId = UserId(UUID.fromString(userId)),
-                token = request.token,
-                deviceId = request.deviceId,
-                deviceName = request.deviceName,
-                platform = platform
-            )
-            
+
             handler.handle(command).fold(
                 { error ->
                     call.respond(
                         HttpStatusCode.BadRequest,
                         RegisterDeviceTokenResponse(
                             success = false,
-                            message = error.toString()
-                        )
+                            message = error.toString(),
+                        ),
                     )
                 },
                 {
@@ -71,13 +74,13 @@ fun Route.deviceTokenRoutes() {
                         HttpStatusCode.OK,
                         RegisterDeviceTokenResponse(
                             success = true,
-                            message = "Device token registered successfully"
-                        )
+                            message = "Device token registered successfully",
+                        ),
                     )
-                }
+                },
             )
         }
-        
+
         delete("/{deviceId}") {
             // TODO: Implement device unregistration
             call.respond(HttpStatusCode.NotImplemented)

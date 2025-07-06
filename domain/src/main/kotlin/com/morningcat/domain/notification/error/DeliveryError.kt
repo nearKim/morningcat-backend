@@ -30,4 +30,8 @@ sealed class DeliveryError(
     data class TemplateError(
         val details: String,
     ) : DeliveryError("Template processing error: $details")
+
+    data class QueueError(
+        val details: String,
+    ) : DeliveryError("Queue operation error: $details")
 }

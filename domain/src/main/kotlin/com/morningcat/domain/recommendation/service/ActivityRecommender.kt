@@ -15,6 +15,7 @@ class ActivityRecommender {
                     ),
                 )
             }
+
             isRainyWeather(weather) -> {
                 listOf(
                     ActivityRecommendation(
@@ -24,6 +25,7 @@ class ActivityRecommender {
                     ),
                 )
             }
+
             else -> emptyList()
         }
 
